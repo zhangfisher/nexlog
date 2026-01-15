@@ -1,4 +1,4 @@
-# nexlog <br/> Test Change
+# nexlog <br/>
 
 <!-- Space for transparent logo -->
 <div align="center">
