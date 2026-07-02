@@ -12,7 +12,7 @@
     .version = "1.0.0",
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/yourusername/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
             .hash = "", // 运行 `zig build` 后会自动填充
         },
     },

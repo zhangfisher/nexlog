@@ -10,7 +10,7 @@
 A powerful, fast, and beautifully simple logging library for Zig applications. Built from the ground up to handle everything from quick debugging to production-scale logging with grace.
 
 [![Latest Release](https://img.shields.io/github/v/release/awacsm81/nexlog?include_prereleases&sort=semver)](https://github.com/awacsm81/nexlog/releases)
-[![Performance](https://img.shields.io/badge/Performance-40K%20logs%2Fs-brightgreen)](https://github.com/chrischtel/nexlog#benchmarks)
+[![Performance](https://img.shields.io/badge/Performance-40K%20logs%2Fs-brightgreen)](https://github.com/zhangfisher/nexlog#benchmarks)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](./LICENSE)
 
 ---
@@ -55,7 +55,7 @@ Whether you're debugging a quick script or building a distributed system that ne
     .version = "0.1.0",
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/chrischtel/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
             .hash = "", // 留空，首次运行时会自动填充
         },
     },
@@ -310,7 +310,7 @@ nexlog is available under the MIT License. See the [LICENSE](./LICENSE) file for
 
 ```bash
 # ❌ 不推荐的旧方式
-zig fetch --save git+https://github.com/chrischtel/nexlog/
+zig fetch --save git+https://github.com/zhangfisher/nexlog/
 ```
 
 ### ✅ 推荐的现代方式
@@ -323,7 +323,7 @@ zig fetch --save git+https://github.com/chrischtel/nexlog/
     .version = "1.0.0",
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/chrischtel/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
             .hash = "",  // ← 留空，Zig 会自动填充
         },
     },

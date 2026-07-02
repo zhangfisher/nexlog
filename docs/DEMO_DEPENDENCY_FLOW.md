@@ -56,7 +56,7 @@ zig build
     .version = "1.0.0",
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/chrischtel/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
             .hash = "",  // ← 他们留空
         },
     },
@@ -69,7 +69,7 @@ zig build
     .version = "1.0.0",
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/chrischtel/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
             .hash = "1220abcdef1234567890abcdef1234567890abcdef1234567890ab",  // ← 自动填充
         },
     },

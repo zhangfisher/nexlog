@@ -12,7 +12,7 @@
     .version = "1.0.0",
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/chrischtel/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
             .hash = "",  // 留空，让 Zig 自动填充
         },
     },
@@ -38,7 +38,7 @@ Updating build.zig.zon
     .version = "1.0.0",
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/chrischtel/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
             .hash = "1220abcdef1234567890abcdef1234567890abcdef1234567890ab", // 自动填充
         },
     },
@@ -52,7 +52,7 @@ Updating build.zig.zon
 C:\Users\<用户>\AppData\Local\zig\
 ├── zig-pkg\                          # 全局下载的依赖包
 │   ├── github.com\
-│   │   └── chrischtel\
+│   │   └── zhangfisher\
 │   │       └── nexlog-<hash>\
 │   │           └── nexlog-<version>.tar.gz
 └── zig-cache\                        # 项目特定缓存
@@ -80,7 +80,7 @@ C:\Users\<用户>\AppData\Local\zig\
 ### 方法 1: 使用 Zig 命令行工具
 ```bash
 # 下载并计算 hash
-wget https://github.com/chrischtel/nexlog/archive/refs/tags/v0.7.1.tar.gz
+wget https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz
 sha256sum nexlog-0.7.1.tar.gz
 
 # 或者使用 Zig 内置工具
@@ -140,7 +140,7 @@ zig build --refresh
 .{
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/chrischtel/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
             .hash = "1220abcdef...",  // 使用具体的 hash
         },
     },
@@ -182,7 +182,7 @@ rm -rf "%LOCALAPPDATA%\zig\zig-pkg"  # Windows
 .{
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/chrischtel/nexlog/archive/refs/tags/v0.8.0.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.8.0.tar.gz",
             .hash = "",  // 新版本，留空让 Zig 自动填充
         },
     },
@@ -232,7 +232,7 @@ wget <url>
     .dependencies = .{
         // 使用 GitHub 发布版本
         .nexlog = .{
-            .url = "https://github.com/chrischtel/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
             .hash = "",  // 首次构建时自动填充
         },
     },
