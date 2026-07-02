@@ -1,6 +1,7 @@
 # nexlog <br/>
 
 ![Zig 0.16.0 Compatible](https://img.shields.io/badge/Zig-0.16.0-compatible-brightgreen)
+
 <!-- Space for transparent logo -->
 <div align="center">
   <!-- Logo will go here -->
@@ -55,7 +56,7 @@ Whether you're debugging a quick script or building a distributed system that ne
     .version = "0.1.0",
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/heads/main.tar.gz",
             .hash = "", // 留空，首次运行时会自动填充
         },
     },
@@ -352,6 +353,7 @@ zig build
 如果你正在开发或测试 nexlog 本身，可以使用以下替代方案：
 
 #### 方案 A: 使用本地路径
+
 ```zig
 .{
     .dependencies = .{
@@ -363,6 +365,7 @@ zig build
 ```
 
 #### 方案 B: 测试本地修改
+
 ```bash
 # 使用你本地修改的 nexlog 版本进行构建
 zig build --fork=../nexlog
@@ -370,11 +373,11 @@ zig build --fork=../nexlog
 
 ### 📊 三种方式对比
 
-| 场景 | 推荐方式 | 命令 | 说明 |
-|------|---------|------|------|
-| **生产使用** | `build.zig.zon` 配置 | `zig build` | 标准方式，自动管理依赖 |
-| **开发测试** | 本地路径 | `path = "../nexlog"` | 测试正在开发的版本 |
-| **临时测试** | Fork 参数 | `--fork=../nexlog` | 测试本地修改 |
+| 场景         | 推荐方式             | 命令                 | 说明                   |
+| ------------ | -------------------- | -------------------- | ---------------------- |
+| **生产使用** | `build.zig.zon` 配置 | `zig build`          | 标准方式，自动管理依赖 |
+| **开发测试** | 本地路径             | `path = "../nexlog"` | 测试正在开发的版本     |
+| **临时测试** | Fork 参数            | `--fork=../nexlog`   | 测试本地修改           |
 
 ### 💡 核心要点
 

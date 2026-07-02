@@ -12,7 +12,7 @@
     .version = "1.0.0",
     .dependencies = .{
         .nexlog = .{
-            .url = "https://github.com/zhangfisher/nexlog/archive/refs/tags/v0.7.1.tar.gz",
+            .url = "https://github.com/zhangfisher/nexlog/archive/refs/heads/main.tar.gz",
             .hash = "", // 运行 `zig build` 后会自动填充
         },
     },
@@ -99,7 +99,7 @@ pub fn main() !void {
     defer nexlog.deinit();
 
     const logger = nexlog.getDefaultLogger();
-    
+
     logger.info("Application started", .{}, nexlog.here(@src()));
     logger.err("This is an error", .{}, nexlog.here(@src()));
 }
@@ -108,18 +108,21 @@ pub fn main() !void {
 ## 📋 发布检查清单
 
 ### 必需文件
+
 - [x] `build.zig.zon` - 包配置
-- [x] `build.zig` - 构建脚本  
+- [x] `build.zig` - 构建脚本
 - [x] `src/nexlog.zig` - 模块入口
 - [ ] `README.md` - 使用说明
 - [ ] `LICENSE` - 开源协议
 
 ### 推荐文件
+
 - [ ] `CHANGELOG.md` - 版本变更记录
 - [ ] `examples/` - 使用示例
 - [ ] `tests/` - 测试用例
 
 ### 版本管理
+
 ```bash
 # 更新版本号时
 1. 修改 build.zig.zon 中的 .version
@@ -181,6 +184,7 @@ zig init-exe
 ### 依赖缓存
 
 Zig 会将下载的依赖缓存到全局目录：
+
 - Windows: `%LOCALAPPDATA%\zig`
 - Linux/Mac: `~/.cache/zig`
 
