@@ -1,5 +1,6 @@
 // errors.zig
 const std = @import("std");
+const types = @import("types.zig");
 
 pub const Error = error{
     IOError,
@@ -27,7 +28,7 @@ pub const ErrorContext = struct {
             .message = message,
             .file = file,
             .line = line,
-            .timestamp = std.time.timestamp(),
+            .timestamp = types.getCurrentTimestamp(),
         };
     }
 
@@ -45,46 +46,15 @@ pub const ErrorContext = struct {
     }
 };
 
-pub const ErrorHandler = struct {
-    pub const ErrorFn = *const fn (context: ErrorContext) Error!void;
+pub const ErrorHandler = *const fn (err: anyerror, context: []const u8) void;
 
-    handler_fn: ErrorFn,
-    max_retries: u32,
-    retry_delay_ms: u32,
-
-    pub fn init(handler_fn: ErrorFn, max_retries: u32, retry_delay_ms: u32) ErrorHandler {
-        return .{
-            .handler_fn = handler_fn,
-            .max_retries = max_retries,
-            .retry_delay_ms = retry_delay_ms,
-        };
-    }
-
-    pub fn handle(self: *const ErrorHandler, context: ErrorContext) Error!void {
-        var retries: u32 = 0;
-        while (retries < self.max_retries) : (retries += 1) {
-            self.handler_fn(context) catch |err| {
-                if (retries == self.max_retries - 1) return err;
-                std.Thread.sleep(self.retry_delay_ms * std.time.ns_per_ms);
-                continue;
-            };
-            break;
-        }
-    }
+pub const ErrorConfig = struct {
+    handler: ErrorHandler = null,
+    max_retries: u32 = 3,
+    retry_delay_ms: u32 = 1000,
 };
 
-pub fn makeError(
-    error_type: Error,
-    message: []const u8,
-    file: []const u8,
-    line: u32,
-) ErrorContext {
-    return ErrorContext.init(error_type, message, file, line);
-}
-
-pub fn defaultErrorHandler(context: ErrorContext) anyerror!void {
-    var stderr_buf: [4096]u8 = undefined;
-    var stderr = std.fs.File.stderr().writer(&stderr_buf);
-    try context.format(&stderr.interface);
-    try stderr.interface.flush();
+/// Default error handler that just prints to stderr
+pub fn defaultErrorHandler(err: anyerror, context: []const u8) void {
+    std.debug.print("Error: {} - {s}\n", .{ err, context });
 }

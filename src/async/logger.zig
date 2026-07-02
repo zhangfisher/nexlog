@@ -111,7 +111,7 @@ pub const AsyncLogger = struct {
             .level = .trace, // Use trace level for flush signals
             .message = "__FLUSH__",
             .metadata = null,
-            .timestamp = std.time.timestamp(),
+            .timestamp =types.getCurrentTimestamp(),
         };
 
         try self.queue.push(flush_entry);
@@ -136,7 +136,10 @@ pub const AsyncLogger = struct {
 
     /// Wait for all queued logs to be processed (for graceful shutdown)
     pub fn drain(self: *Self, timeout_ms: u64) !void {
-        const start_time = std.time.milliTimestamp();
+        // In Zig 0.16, use Io.Clock.now instead of std.time.milliTimestamp
+        var io_threaded: std.Io.Threaded = .init_single_threaded;
+        const io = io_threaded.io();
+        const start_time = @divTrunc(std.Io.Clock.now(.real, io).nanoseconds, 1_000_000); // Convert to ms
 
         while (true) {
             const stats = self.getStats();
@@ -144,12 +147,14 @@ pub const AsyncLogger = struct {
                 return;
             }
 
-            const elapsed = std.time.milliTimestamp() - start_time;
+            const current_time_ns = std.Io.Clock.now(.real, io).nanoseconds;
+            const current_time = @divTrunc(current_time_ns, 1_000_000);
+            const elapsed = current_time - start_time;
             if (elapsed > timeout_ms) {
                 return error.DrainTimeout;
             }
 
-            std.Thread.sleep(1_000_000); // Sleep 1ms
+            std.Io.sleep(io, .{ .nanoseconds = 1_000_000 }, .real) catch {}; // Sleep 1ms
         }
     }
 };

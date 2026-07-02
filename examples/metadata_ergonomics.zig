@@ -1,10 +1,9 @@
 const std = @import("std");
 const nexlog = @import("nexlog");
+const types = nexlog.core.types;
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    const allocator = std.heap.page_allocator;
 
     // Create logger with debug level enabled
     const logger = try nexlog.Logger.init(allocator, .{ .min_level = .debug });
@@ -14,7 +13,7 @@ pub fn main() !void {
 
     // OLD WAY: Manual metadata creation (verbose and error-prone)
     const old_metadata = nexlog.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = @as(usize, std.Thread.getCurrentId()),
         .file = @src().file,
         .line = @src().line,

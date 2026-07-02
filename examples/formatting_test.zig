@@ -1,11 +1,10 @@
 const std = @import("std");
 const nexlog = @import("nexlog");
 const format = nexlog.utils.format;
+const types = nexlog.core.types;
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
 
     std.debug.print("=== Testing Custom Formatting ===\n", .{});
 
@@ -39,7 +38,7 @@ fn testDefaultFormatting(allocator: std.mem.Allocator) !void {
     defer logger.deinit();
 
     const metadata = nexlog.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 12345,
         .file = "test.zig",
         .line = 42,

@@ -3,7 +3,7 @@ const nexlog = @import("nexlog");
 const logger = nexlog.core.logger;
 const types = nexlog.core.types;
 const format = nexlog.utils.format;
-const init = @import("nexlog").init;
+const nexlogInit = @import("nexlog").init;
 
 const BenchmarkResult = struct {
     name: []const u8,
@@ -81,11 +81,11 @@ const BenchmarkError = error{
 
 fn runBenchmark(
     allocator: std.mem.Allocator,
+    io: std.Io,
     name: []const u8,
     iterations: usize,
     comptime benchmarkFn: fn (allocator: std.mem.Allocator) anyerror!void,
 ) anyerror!BenchmarkResult {
-    var timer = try std.time.Timer.start();
     var total_time_ns: u64 = 0;
 
     // Warm up
@@ -94,10 +94,11 @@ fn runBenchmark(
     // Run the benchmark
     var i: usize = 0;
     while (i < iterations) : (i += 1) {
-        const start_time = timer.read();
+        const start_ts = std.Io.Clock.now(.real, io);
         try benchmarkFn(allocator);
-        const end_time = timer.read();
-        total_time_ns += end_time - start_time;
+        const end_ts = std.Io.Clock.now(.real, io);
+        const elapsed = end_ts.nanoseconds - start_ts.nanoseconds;
+        total_time_ns += @intCast(elapsed);
     }
 
     const avg_time_ns = total_time_ns / iterations;
@@ -153,7 +154,7 @@ fn benchmarkJsonFormat(allocator: std.mem.Allocator) !void {
     };
 
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "benchmark.zig",
         .line = 42,
@@ -194,7 +195,7 @@ fn benchmarkLogfmtFormat(allocator: std.mem.Allocator) !void {
     };
 
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "benchmark.zig",
         .line = 42,
@@ -237,7 +238,7 @@ fn benchmarkCustomFormat(allocator: std.mem.Allocator) !void {
     };
 
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "benchmark.zig",
         .line = 42,
@@ -263,7 +264,7 @@ fn benchmarkLargeFields(allocator: std.mem.Allocator) !void {
     defer formatter.deinit();
 
     // Create a large JSON object as a string
-    var large_json = std.ArrayList(u8){};
+    var large_json = std.ArrayList(u8).empty;
     defer large_json.deinit(allocator);
 
     try large_json.appendSlice(allocator, "{\"data\":[");
@@ -271,7 +272,10 @@ fn benchmarkLargeFields(allocator: std.mem.Allocator) !void {
     while (i < 1000) : (i += 1) {
         if (i > 0) try large_json.appendSlice(allocator, ",");
         try large_json.appendSlice(allocator, "{\"id\":");
-        try std.fmt.format(large_json.writer(allocator), "{d}", .{i});
+        // In Zig 0.16, use allocPrint and appendSlice instead of writer
+        const num_str = try std.fmt.allocPrint(allocator, "{d}", .{i});
+        defer allocator.free(num_str);
+        try large_json.appendSlice(allocator, num_str);
         try large_json.appendSlice(allocator, ",\"value\":\"some data\"}");
     }
     try large_json.appendSlice(allocator, "]}");
@@ -292,7 +296,7 @@ fn benchmarkLargeFields(allocator: std.mem.Allocator) !void {
     };
 
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "benchmark.zig",
         .line = 42,
@@ -318,7 +322,7 @@ fn benchmarkManyFields(allocator: std.mem.Allocator) !void {
     defer formatter.deinit();
 
     // Create many fields
-    var fields = std.ArrayList(format.StructuredField){};
+    var fields = std.ArrayList(format.StructuredField).empty;
     defer fields.deinit(allocator);
 
     var i: usize = 0;
@@ -336,7 +340,7 @@ fn benchmarkManyFields(allocator: std.mem.Allocator) !void {
     }
 
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "benchmark.zig",
         .line = 42,
@@ -390,7 +394,7 @@ fn benchmarkWithAttributes(allocator: std.mem.Allocator) !void {
     };
 
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "benchmark.zig",
         .line = 42,
@@ -430,21 +434,22 @@ fn benchmarkLoggerIntegrationWrapper(allocator: std.mem.Allocator) BenchmarkErro
     };
 }
 
-pub fn main() !void {
-    const allocator = std.heap.smp_allocator;
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const io = init.io;
 
     const iterations = 10_000;
     var results: std.ArrayList(BenchmarkResult) = .empty;
     defer results.deinit(allocator);
 
     // Run benchmarks
-    try results.append(allocator, try runBenchmark(allocator, "JSON Format", iterations, benchmarkJsonFormat));
-    try results.append(allocator, try runBenchmark(allocator, "Logfmt Format", iterations, benchmarkLogfmtFormat));
-    try results.append(allocator, try runBenchmark(allocator, "Custom Format", iterations, benchmarkCustomFormat));
-    try results.append(allocator, try runBenchmark(allocator, "Large Fields", iterations / 10, benchmarkLargeFields));
-    try results.append(allocator, try runBenchmark(allocator, "Many Fields", iterations / 2, benchmarkManyFields));
-    try results.append(allocator, try runBenchmark(allocator, "With Attributes", iterations, benchmarkWithAttributes));
-    try results.append(allocator, try runBenchmark(allocator, "Logger Integration", iterations, benchmarkLoggerIntegrationWrapper));
+    try results.append(allocator, try runBenchmark(allocator, io, "JSON Format", iterations, benchmarkJsonFormat));
+    try results.append(allocator, try runBenchmark(allocator, io, "Logfmt Format", iterations, benchmarkLogfmtFormat));
+    try results.append(allocator, try runBenchmark(allocator, io, "Custom Format", iterations, benchmarkCustomFormat));
+    try results.append(allocator, try runBenchmark(allocator, io, "Large Fields", iterations / 10, benchmarkLargeFields));
+    try results.append(allocator, try runBenchmark(allocator, io, "Many Fields", iterations / 2, benchmarkManyFields));
+    try results.append(allocator, try runBenchmark(allocator, io, "With Attributes", iterations, benchmarkWithAttributes));
+    try results.append(allocator, try runBenchmark(allocator, io, "Logger Integration", iterations, benchmarkLoggerIntegrationWrapper));
 
     // Print results
     printBenchmarkResults(results.items);

@@ -4,10 +4,7 @@ const format = nexlog.utils.format;
 const types = nexlog.core.types;
 
 pub fn main() !void {
-    // Create a general purpose allocator
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    const allocator = std.heap.page_allocator;
 
     // Example 1: JSON format
     try jsonExample(allocator);
@@ -56,7 +53,7 @@ fn jsonExample(allocator: std.mem.Allocator) !void {
 
     // Create metadata
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "main.zig",
         .line = 42,
@@ -109,7 +106,7 @@ fn logfmtExample(allocator: std.mem.Allocator) !void {
 
     // Create metadata
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "main.zig",
         .line = 42,
@@ -164,7 +161,7 @@ fn customFormatExample(allocator: std.mem.Allocator) !void {
 
     // Create metadata
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "main.zig",
         .line = 42,
@@ -217,7 +214,7 @@ fn nestedStructuresExample(allocator: std.mem.Allocator) !void {
 
     // Create metadata
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "main.zig",
         .line = 42,

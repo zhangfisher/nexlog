@@ -1,10 +1,9 @@
 const std = @import("std");
 const nexlog = @import("nexlog");
 
-pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+pub fn main(init: std.process.Init) !void {
+    const allocator = init.gpa;
+    const io = init.io;
 
     // Initialize context manager
     nexlog.ContextManager.init(allocator);
@@ -22,37 +21,37 @@ pub fn main() !void {
 
     // Demo 1: Basic request tracking
     std.debug.print("\n=== Demo 1: Basic Request Tracking ===\n", .{});
-    try handleUserRequest(logger, "user123");
+    try handleUserRequest(logger, io, "user123");
 
     // Demo 2: Cross-function context
     std.debug.print("\n=== Demo 2: Cross-Function Context ===\n", .{});
     try processOrder(logger, "order456");
 }
 
-fn handleUserRequest(logger: *nexlog.Logger, user_id: []const u8) !void {
+fn handleUserRequest(logger: *nexlog.Logger, io: std.Io, user_id: []const u8) !void {
     // Set request context
     nexlog.setRequestContext("req-12345", "user_login");
     defer nexlog.clearContext();
 
     logger.info("Processing user login for {s}", .{user_id}, nexlog.hereWithContext(@src()));
 
-    try authenticateUser(logger, user_id);
-    try loadUserProfile(logger, user_id);
+    try authenticateUser(logger, io, user_id);
+    try loadUserProfile(logger, io, user_id);
 
     logger.info("User login completed successfully", .{}, nexlog.hereWithContext(@src()));
 }
 
-fn authenticateUser(logger: *nexlog.Logger, user_id: []const u8) !void {
+fn authenticateUser(logger: *nexlog.Logger, io: std.Io, user_id: []const u8) !void {
     logger.debug("Validating credentials for user {s}", .{user_id}, nexlog.hereWithContext(@src()));
-    // Simulate auth work
-    std.Thread.sleep(10 * 1000000); // 10ms
+    // Simulate auth work - use std.Io.sleep for Zig 0.16 with Duration and Clock
+    try std.Io.sleep(io, .{ .nanoseconds = 10 * 1000000 }, .real);
     logger.debug("Credentials validated", .{}, nexlog.hereWithContext(@src()));
 }
 
-fn loadUserProfile(logger: *nexlog.Logger, user_id: []const u8) !void {
+fn loadUserProfile(logger: *nexlog.Logger, io: std.Io, user_id: []const u8) !void {
     logger.debug("Loading profile for user {s}", .{user_id}, nexlog.hereWithContext(@src()));
-    // Simulate database work
-    std.Thread.sleep(20 * 1000000); // 20ms
+    // Simulate database work - use std.Io.sleep for Zig 0.16 with Duration and Clock
+    try std.Io.sleep(io, .{ .nanoseconds = 20 * 1000000 }, .real);
     logger.debug("Profile loaded", .{}, nexlog.hereWithContext(@src()));
 }
 

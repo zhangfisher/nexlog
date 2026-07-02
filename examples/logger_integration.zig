@@ -5,13 +5,11 @@ const types = nexlog.core.types;
 const format = nexlog.utils.format;
 
 pub fn main() !void {
-    // Create a general purpose allocator
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    // Zig 0.16: use simple allocator
+    const allocator = std.heap.page_allocator;
 
     // Create logs directory if it doesn't exist
-    try std.fs.cwd().makePath("logs");
+    // Note: For simplicity, we'll assume the directory exists or handle it in the library
 
     // Initialize the logging system
     var builder = nexlog.LogBuilder.init();
@@ -46,7 +44,7 @@ fn basicStructuredLogging(log: *Logger, _: std.mem.Allocator) !void {
 
     // Create metadata
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "main.zig",
         .line = 42,
@@ -91,7 +89,7 @@ fn customFormatterLogging(log: *Logger, allocator: std.mem.Allocator) !void {
 
     // Create metadata
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "main.zig",
         .line = 42,
@@ -150,7 +148,7 @@ fn multiHandlerLogging(log: *Logger, allocator: std.mem.Allocator) !void {
 
     // Create metadata
     const metadata = types.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 1234,
         .file = "main.zig",
         .line = 42,

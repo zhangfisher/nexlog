@@ -1,10 +1,15 @@
 const std = @import("std");
 const nexlog = @import("nexlog");
+const types = nexlog.core.types;
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    // Zig 0.16: use simple allocator
+    const allocator = std.heap.page_allocator;
+
+    // Create a simple IO instance for file operations
+    // In Zig 0.16, create a Threaded instance and get its io
+    var io_threaded: std.Io.Threaded = .init_single_threaded;
+    const io = io_threaded.io();
 
     std.debug.print("=== Nexlog Async Logging Demo ===\n\n", .{});
 
@@ -33,7 +38,8 @@ pub fn main() !void {
     try async_logger.addHandler(&console_async_handler);
 
     // Create and add async file handler
-    try std.fs.cwd().makePath("logs");
+    // Note: In Zig 0.16, directory creation requires specific permissions
+    // We'll let the file handler create the directory as needed
 
     const file_config = nexlog.async_logging.AsyncFileConfig{
         .path = "logs/async_demo.log",
@@ -42,6 +48,7 @@ pub fn main() !void {
         .enable_rotation = true,
         .buffer_size = 8192, // 8KB buffer
         .flush_interval_ms = 2000, // Flush every 2 seconds
+        .io = io,
     };
 
     var file_handler = try nexlog.AsyncFileHandler.init(allocator, file_config);
@@ -58,7 +65,7 @@ pub fn main() !void {
 
     // Demo 1: Basic async logging
     const metadata = nexlog.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = std.Thread.getCurrentId(),
         .file = "async_demo.zig",
         .line = 65,
@@ -72,7 +79,7 @@ pub fn main() !void {
     std.debug.print("2. High-throughput logging simulation...\n", .{});
 
     // Demo 2: High-throughput logging simulation
-    const start_time = std.time.nanoTimestamp();
+    const start_time = std.Io.Clock.now(.real, io).nanoseconds;
     const log_count = 1000;
 
     for (0..log_count) |i| {
@@ -84,7 +91,7 @@ pub fn main() !void {
         }
     }
 
-    const end_time = std.time.nanoTimestamp();
+    const end_time = std.Io.Clock.now(.real, io).nanoseconds;
     const duration_ms = @as(f64, @floatFromInt(end_time - start_time)) / 1_000_000.0;
 
     std.debug.print("  Logged {d} entries in {d:.2}ms\n", .{ log_count, duration_ms });
@@ -110,7 +117,7 @@ pub fn main() !void {
     try async_logger.flushAsync();
 
     // Wait a bit for processing to complete
-    std.Thread.sleep(100_000_000); // 100ms
+    try std.Io.sleep(io, .{ .nanoseconds = 100_000_000 }, .real); // 100ms
 
     const final_stats = async_logger.getStats();
     const file_stats = file_handler.getStats();
@@ -139,7 +146,7 @@ pub fn main() !void {
 
 fn workerThread(async_logger: *nexlog.AsyncLogger, thread_id: usize) void {
     const metadata = nexlog.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = std.Thread.getCurrentId(),
         .file = "async_demo.zig",
         .line = 140,
@@ -153,6 +160,9 @@ fn workerThread(async_logger: *nexlog.AsyncLogger, thread_id: usize) void {
         };
 
         // Small delay to simulate work
-        std.Thread.sleep(1_000_000); // 1ms
+        // Create local Io instance for Zig 0.16
+        var io_threaded: std.Io.Threaded = .init_single_threaded;
+        const worker_io = io_threaded.io();
+        std.Io.sleep(worker_io, .{ .nanoseconds = 1_000_000 }, .real) catch {}; // 1ms
     }
 }

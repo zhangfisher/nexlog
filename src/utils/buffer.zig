@@ -1,5 +1,7 @@
 const std = @import("std");
+const core_types = @import("../core/types.zig");
 const errors = @import("../core/errors.zig");
+const mutex_helpers = @import("../mutex_helpers.zig");
 
 /// A high-performance circular buffer implementation
 pub const CircularBuffer = struct {
@@ -10,7 +12,7 @@ pub const CircularBuffer = struct {
     read_pos: usize,
     write_pos: usize,
     full: bool,
-    mutex: std.Thread.Mutex,
+    mutex: std.atomic.Mutex,
 
     compaction_threshold_percent: usize = 75,
     last_compaction: i64 = 0,
@@ -26,8 +28,8 @@ pub const CircularBuffer = struct {
     last_operation_timestamp: std.atomic.Value(i64),
 
     pub fn compact(self: *Self) !void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        mutex_helpers.lockMutex(&self.mutex);
+        defer mutex_helpers.unlockMutex(&self.mutex);
 
         if (self.isEmpty()) return;
 
@@ -62,7 +64,7 @@ pub const CircularBuffer = struct {
         self.write_pos = bytes_copied;
         self.full = false;
 
-        self.last_compaction = std.time.timestamp();
+        self.last_compaction = core_types.getCurrentTimestamp();
         _ = self.total_compactions.fetchAdd(1, .monotonic);
     }
 
@@ -75,14 +77,14 @@ pub const CircularBuffer = struct {
             .read_pos = 0,
             .write_pos = 0,
             .full = false,
-            .mutex = std.Thread.Mutex{},
+            .mutex = std.atomic.Mutex.unlocked,
             .total_bytes_written = std.atomic.Value(usize).init(0),
             .total_compactions = std.atomic.Value(usize).init(0),
             .overflow_attempts = std.atomic.Value(usize).init(0),
             .underflow_attempts = std.atomic.Value(usize).init(0),
             .peak_usage = std.atomic.Value(usize).init(0),
             .total_operations = std.atomic.Value(usize).init(0),
-            .last_operation_timestamp = std.atomic.Value(i64).init(std.time.timestamp()),
+            .last_operation_timestamp = std.atomic.Value(i64).init(core_types.getCurrentTimestamp()),
         };
         return self;
     }
@@ -100,11 +102,11 @@ pub const CircularBuffer = struct {
 
     /// Write data to the buffer
     pub fn write(self: *Self, data: []const u8) !usize {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        mutex_helpers.lockMutex(&self.mutex);
+        defer mutex_helpers.unlockMutex(&self.mutex);
 
         _ = self.total_operations.fetchAdd(1, .monotonic);
-        _ = self.last_operation_timestamp.store(std.time.timestamp(), .monotonic);
+        _ = self.last_operation_timestamp.store(core_types.getCurrentTimestamp(), .monotonic);
 
         if (data.len > self.capacity()) {
             _ = self.overflow_attempts.fetchAdd(1, .monotonic);
@@ -189,7 +191,7 @@ pub const CircularBuffer = struct {
 
         // Copy back to main buffer
         @memcpy(self.buffer[0..bytes_copied], temp_buffer[0..bytes_copied]);
-        self.last_compaction = std.time.timestamp();
+        self.last_compaction = core_types.getCurrentTimestamp();
     }
 
     fn readInternal(self: *Self, dest: []u8) !usize {
@@ -226,11 +228,11 @@ pub const CircularBuffer = struct {
 
     /// Read data from the buffer
     pub fn read(self: *Self, dest: []u8) !usize {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        mutex_helpers.lockMutex(&self.mutex);
+        defer mutex_helpers.unlockMutex(&self.mutex);
 
         _ = self.total_operations.fetchAdd(1, .monotonic);
-        _ = self.last_operation_timestamp.store(std.time.timestamp(), .monotonic);
+        _ = self.last_operation_timestamp.store(core_types.getCurrentTimestamp(), .monotonic);
 
         if (self.isEmpty()) {
             _ = self.underflow_attempts.fetchAdd(1, .monotonic);
@@ -264,8 +266,8 @@ pub const CircularBuffer = struct {
 
     /// Reset buffer to initial state
     pub fn reset(self: *Self) void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        mutex_helpers.lockMutex(&self.mutex);
+        defer mutex_helpers.unlockMutex(&self.mutex);
 
         self.read_pos = 0;
         self.write_pos = 0;
@@ -290,7 +292,7 @@ pub const BufferPool = struct {
     buffers: std.ArrayList(*CircularBuffer),
     buffer_size: usize,
     max_buffers: usize,
-    mutex: std.Thread.Mutex,
+    mutex: std.atomic.Mutex,
 
     pub fn init(allocator: std.mem.Allocator, buffer_size: usize, max_buffers: usize) !*Self {
         const self = try allocator.create(Self);
@@ -299,7 +301,7 @@ pub const BufferPool = struct {
             .buffers = std.ArrayList(*CircularBuffer).init(allocator),
             .buffer_size = buffer_size,
             .max_buffers = max_buffers,
-            .mutex = std.Thread.Mutex{},
+            .mutex = std.atomic.Mutex.unlocked,
         };
         return self;
     }
@@ -314,8 +316,8 @@ pub const BufferPool = struct {
 
     /// Get an available buffer or create a new one
     pub fn acquire(self: *Self) !*CircularBuffer {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        mutex_helpers.lockMutex(&self.mutex);
+        defer mutex_helpers.unlockMutex(&self.mutex);
 
         // Look for an empty buffer first
         for (self.buffers.items) |buffer| {
@@ -336,8 +338,8 @@ pub const BufferPool = struct {
 
     /// Release a buffer back to the pool
     pub fn release(self: *Self, buffer: *CircularBuffer) void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        mutex_helpers.lockMutex(&self.mutex);
+        defer mutex_helpers.unlockMutex(&self.mutex);
 
         // Verify the buffer belongs to this pool
         for (self.buffers.items) |pool_buffer| {
@@ -388,7 +390,7 @@ pub fn isHealthy(self: *CircularBuffer) bool {
         if (overflow_rate > 0.10 or underflow_rate > 0.10) return false;
     }
 
-    const time_since_last_op = std.time.timestamp() - self.last_operation_timestamp.load(.monotonic);
+    const time_since_last_op = core_types.getCurrentTimestamp() - self.last_operation_timestamp.load(.monotonic);
     if (time_since_last_op > 60) return false; // 1 minute inactivity threshold
 
     return true;
@@ -399,7 +401,7 @@ pub fn resetHealthMetrics(self: *CircularBuffer) void {
     _ = self.underflow_attempts.store(0, .monotonic);
     _ = self.total_operations.store(0, .monotonic);
     _ = self.peak_usage.store(0, .monotonic);
-    _ = self.last_operation_timestamp.store(std.time.timestamp(), .monotonic);
+    _ = self.last_operation_timestamp.store(core_types.getCurrentTimestamp(), .monotonic);
 }
 
 pub fn getBufferHealth(self: *CircularBuffer, allocator: std.mem.Allocator) !BufferHealth {
@@ -407,7 +409,7 @@ pub fn getBufferHealth(self: *CircularBuffer, allocator: std.mem.Allocator) !Buf
         .status = .healthy,
         .issues = std.ArrayList([]const u8).init(allocator),
         .usage_percent = @as(f32, @floatFromInt(self.len())) / @as(f32, @floatFromInt(self.capacity())) * 100.0,
-        .time_since_last_op_ms = (std.time.timestamp() - self.last_operation_timestamp.load(.monotonic)) * 1000,
+        .time_since_last_op_ms = (core_types.getCurrentTimestamp() - self.last_operation_timestamp.load(.monotonic)) * 1000,
     };
 
     // Check usage thresholds

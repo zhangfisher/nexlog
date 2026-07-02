@@ -1,17 +1,18 @@
 const std = @import("std");
 const types = @import("types.zig");
+const mutex_helpers = @import("../mutex_helpers.zig");
 
 /// Thread-local context storage for logging
 pub const ContextManager = struct {
     // Use a mutex-protected HashMap to store per-thread context
     var context_map: std.HashMap(u64, types.LogContext, std.hash_map.AutoContext(u64), 80) = undefined;
-    var context_mutex: std.Thread.Mutex = std.Thread.Mutex{};
+    var context_mutex: std.atomic.Mutex = .unlocked;
     var initialized: bool = false;
 
     /// Initialize the context manager (call once at startup)
     pub fn init(allocator: std.mem.Allocator) void {
-        context_mutex.lock();
-        defer context_mutex.unlock();
+        mutex_helpers.lockMutex(&context_mutex);
+        defer mutex_helpers.unlockMutex(&context_mutex);
 
         if (!initialized) {
             context_map = std.HashMap(u64, types.LogContext, std.hash_map.AutoContext(u64), 80).init(allocator);
@@ -21,8 +22,8 @@ pub const ContextManager = struct {
 
     /// Deinitialize the context manager
     pub fn deinit() void {
-        context_mutex.lock();
-        defer context_mutex.unlock();
+        mutex_helpers.lockMutex(&context_mutex);
+        defer mutex_helpers.unlockMutex(&context_mutex);
 
         if (initialized) {
             context_map.deinit();
@@ -34,8 +35,8 @@ pub const ContextManager = struct {
     pub fn setContext(context: types.LogContext) void {
         const thread_id = std.Thread.getCurrentId();
 
-        context_mutex.lock();
-        defer context_mutex.unlock();
+        mutex_helpers.lockMutex(&context_mutex);
+        defer mutex_helpers.unlockMutex(&context_mutex);
 
         if (initialized) {
             context_map.put(thread_id, context) catch {
@@ -49,8 +50,8 @@ pub const ContextManager = struct {
     pub fn getContext() ?types.LogContext {
         const thread_id = std.Thread.getCurrentId();
 
-        context_mutex.lock();
-        defer context_mutex.unlock();
+        mutex_helpers.lockMutex(&context_mutex);
+        defer mutex_helpers.unlockMutex(&context_mutex);
 
         if (initialized) {
             return context_map.get(thread_id);
@@ -62,8 +63,8 @@ pub const ContextManager = struct {
     pub fn clearContext() void {
         const thread_id = std.Thread.getCurrentId();
 
-        context_mutex.lock();
-        defer context_mutex.unlock();
+        mutex_helpers.lockMutex(&context_mutex);
+        defer mutex_helpers.unlockMutex(&context_mutex);
 
         if (initialized) {
             _ = context_map.remove(thread_id);
@@ -95,14 +96,14 @@ pub const ContextManager = struct {
 
     /// Generate a simple request ID (basic implementation)
     pub fn generateRequestId(allocator: std.mem.Allocator) ![]u8 {
-        const timestamp = std.time.timestamp();
+        const timestamp =types.getCurrentTimestamp();
         const thread_id = std.Thread.getCurrentId();
         return std.fmt.allocPrint(allocator, "req-{}-{}", .{ timestamp, thread_id });
     }
 
     /// Generate a simple correlation ID
     pub fn generateCorrelationId(allocator: std.mem.Allocator) ![]u8 {
-        const timestamp = std.time.timestamp();
+        const timestamp =types.getCurrentTimestamp();
         const thread_id = std.Thread.getCurrentId();
         return std.fmt.allocPrint(allocator, "corr-{}-{}", .{ timestamp, thread_id });
     }

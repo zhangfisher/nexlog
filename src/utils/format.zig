@@ -1,5 +1,6 @@
 // utils/format.zig
 const std = @import("std");
+const core_types = @import("../core/types.zig");
 const types = @import("../core/types.zig");
 
 pub const StructuredField = struct {
@@ -750,7 +751,7 @@ pub const Formatter = struct {
         writer: *std.Io.Writer,
         metadata: ?types.LogMetadata,
     ) !void {
-        const timestamp = if (metadata) |m| m.timestamp else std.time.timestamp();
+        const timestamp = if (metadata) |m| m.timestamp else core_types.getCurrentTimestamp();
 
         switch (self.config.timestamp_format) {
             .unix => try writer.print("{d}", .{timestamp}),

@@ -1,5 +1,9 @@
 const std = @import("std");
 const types = @import("../core/types.zig");
+const mutex_helpers = @import("../mutex_helpers.zig");
+
+const lockMutex = mutex_helpers.lockMutex;
+const unlockMutex = mutex_helpers.unlockMutex;
 
 /// Log entry for async processing
 pub const LogEntry = struct {
@@ -13,7 +17,7 @@ pub const LogEntry = struct {
             .level = level,
             .message = message,
             .metadata = metadata,
-            .timestamp = std.time.timestamp(),
+            .timestamp = types.getCurrentTimestamp(),
         };
     }
 
@@ -28,8 +32,8 @@ pub const AsyncLogQueue = struct {
 
     allocator: std.mem.Allocator,
     queue: std.ArrayList(LogEntry),
-    mutex: std.Thread.Mutex,
-    condition: std.Thread.Condition,
+    mutex: std.atomic.Mutex,
+    // condition: std.Thread.Condition, // Removed in Zig 0.16, using simple spin wait instead
     max_size: usize,
     dropped_count: u64,
     is_closed: bool,
@@ -38,8 +42,7 @@ pub const AsyncLogQueue = struct {
         return Self{
             .allocator = allocator,
             .queue = .empty,
-            .mutex = std.Thread.Mutex{},
-            .condition = std.Thread.Condition{},
+            .mutex = std.atomic.Mutex.unlocked,
             .max_size = max_size,
             .dropped_count = 0,
             .is_closed = false,
@@ -47,8 +50,8 @@ pub const AsyncLogQueue = struct {
     }
 
     pub fn deinit(self: *Self) void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         // Clean up remaining entries
         for (self.queue.items) |*entry| {
@@ -56,13 +59,13 @@ pub const AsyncLogQueue = struct {
         }
         self.queue.deinit(self.allocator);
         self.is_closed = true;
-        self.condition.broadcast();
+        // self.condition.broadcast(); // Removed in Zig 0.16, using simple spin wait instead
     }
 
     /// Push log entry to queue (non-blocking with backpressure)
     pub fn push(self: *Self, entry: LogEntry) !void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         if (self.is_closed) {
             return error.QueueClosed;
@@ -82,16 +85,21 @@ pub const AsyncLogQueue = struct {
         owned_entry.message = owned_message;
 
         try self.queue.append(self.allocator, owned_entry);
-        self.condition.signal();
+        // self.condition.signal(); // Removed in Zig 0.16, using simple spin wait
     }
 
     /// Pop log entry from queue (blocking)
     pub fn pop(self: *Self) !LogEntry {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         while (self.queue.items.len == 0 and !self.is_closed) {
-            self.condition.wait(&self.mutex);
+            // In Zig 0.16, use simple spin wait instead of condition variable
+            unlockMutex(&self.mutex);
+            // Can't use std.Io.sleep without an Io instance, so use a small yield
+            std.atomic.spinLoopHint();
+            unlockMutex(&self.mutex);
+            lockMutex(&self.mutex);
         }
 
         if (self.is_closed and self.queue.items.len == 0) {
@@ -103,8 +111,8 @@ pub const AsyncLogQueue = struct {
 
     /// Try to pop without blocking
     pub fn tryPop(self: *Self) ?LogEntry {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         if (self.queue.items.len > 0) {
             return self.queue.orderedRemove(0);
@@ -115,8 +123,8 @@ pub const AsyncLogQueue = struct {
 
     /// Get queue statistics
     pub fn getStats(self: *Self) QueueStats {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         return QueueStats{
             .queue_size = self.queue.items.len,
@@ -127,11 +135,11 @@ pub const AsyncLogQueue = struct {
     }
 
     pub fn close(self: *Self) void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         self.is_closed = true;
-        self.condition.broadcast();
+        // self.condition.broadcast(); // Removed in Zig 0.16, using simple spin wait instead
     }
 };
 
@@ -152,7 +160,7 @@ pub const AsyncLogProcessor = struct {
     thread: ?std.Thread,
     should_stop: std.atomic.Value(bool),
     stats: ProcessorStats,
-    mutex: std.Thread.Mutex,
+    mutex: std.atomic.Mutex,
 
     pub fn init(allocator: std.mem.Allocator, queue: *AsyncLogQueue) Self {
         return Self{
@@ -162,7 +170,7 @@ pub const AsyncLogProcessor = struct {
             .thread = null,
             .should_stop = std.atomic.Value(bool).init(false),
             .stats = ProcessorStats{},
-            .mutex = std.Thread.Mutex{},
+            .mutex = std.atomic.Mutex.unlocked,
         };
     }
 
@@ -172,8 +180,8 @@ pub const AsyncLogProcessor = struct {
     }
 
     pub fn addHandler(self: *Self, handler: *AsyncLogHandler) !void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         try self.handlers.append(self.allocator, handler);
     }
@@ -223,9 +231,9 @@ pub const AsyncLogProcessor = struct {
             mutable_entry.deinit(self.allocator);
         }
 
-        self.mutex.lock();
+        lockMutex(&self.mutex);
         const handlers_copy = self.handlers.items;
-        self.mutex.unlock();
+        unlockMutex(&self.mutex);
 
         for (handlers_copy) |handler| {
             handler.logAsync(entry) catch {
@@ -238,8 +246,8 @@ pub const AsyncLogProcessor = struct {
     }
 
     fn updateStats(self: *Self, delta: ProcessorStats) void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         self.stats.processed += delta.processed;
         self.stats.errors += delta.errors;
@@ -247,8 +255,8 @@ pub const AsyncLogProcessor = struct {
     }
 
     pub fn getStats(self: *Self) ProcessorStats {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         return self.stats;
     }

@@ -1,5 +1,7 @@
 # nexlog <br/>
 
+upgrade to zig 0.16
+
 <!-- Space for transparent logo -->
 <div align="center">
   <!-- Logo will go here -->
@@ -14,14 +16,14 @@ A powerful, fast, and beautifully simple logging library for Zig applications. B
 
 ---
 
-*Currently in active development - check the [CHANGELOG](./CHANGELOG.md) for the latest updates*
+_Currently in active development - check the [CHANGELOG](./CHANGELOG.md) for the latest updates_
 
 **Compatible with Zig 0.14 and 0.15.0-dev.877+0adcfd60f**
 
 > [!WARNING]  
 > Zig v0.15.1 dropped gzip compression support in the standard library. Coming with the next update, compressing rotated files with gzip will be unavailable. For further information, follow [this issue](https://github.com/chrischtel/nexlog/issues/40).
 
-## Why nexlog?  
+## Why nexlog?
 
 After working with logging libraries across different languages, I found myself constantly missing features or fighting with overly complex APIs. nexlog was born from the simple idea that logging should be powerful when you need it, but never get in your way when you don't.
 
@@ -30,12 +32,14 @@ Whether you're debugging a quick script or building a distributed system that ne
 ## Features
 
 **Core Logging**
+
 - Multiple log levels with beautiful colored output
 - Automatic source location tracking (file, line, function)
 - Rich metadata support with timestamps and thread IDs
 - Zero-overhead when logging is disabled
 
 **Advanced Features**
+
 - Context tracking for following requests across your application
 - Structured logging with JSON, logfmt, and custom formats
 - Automatic file rotation with configurable size limits
@@ -61,11 +65,12 @@ Add nexlog to your `build.zig.zon` file:
 ```
 
 **Quick install:**
+
 ```bash
 zig fetch --save git+https://github.com/chrischtel/nexlog/
 ```
 
-*For development versions, append `#develop` to the URL.*
+_For development versions, append `#develop` to the URL._
 
 ## Quick Start
 
@@ -184,15 +189,16 @@ pub const CustomHandler = struct {
 
 Recent benchmarks show nexlog handles high-throughput scenarios gracefully:
 
-| Scenario | Logs/Second | Notes |
-|----------|-------------|-------|
-| Simple console logging | 41,297 | Basic text output |
-| JSON structured logging | 26,790 | Full structured format |
-| Logfmt output | 39,284 | Key-value format |
-| Large payloads (100 fields) | 8,594 | Complex structured data |
-| Production integration | 5,878 | Full pipeline with handlers |
+| Scenario                    | Logs/Second | Notes                       |
+| --------------------------- | ----------- | --------------------------- |
+| Simple console logging      | 41,297      | Basic text output           |
+| JSON structured logging     | 26,790      | Full structured format      |
+| Logfmt output               | 39,284      | Key-value format            |
+| Large payloads (100 fields) | 8,594       | Complex structured data     |
+| Production integration      | 5,878       | Full pipeline with handlers |
 
 Run the benchmarks yourself:
+
 ```bash
 zig build bench
 ```
@@ -220,7 +226,7 @@ try builder
 The `examples/` directory contains working code for every feature:
 
 - **`basic_usage.zig`** - Start here for simple logging
-- **`context_tracking.zig`** - Request tracking across functions  
+- **`context_tracking.zig`** - Request tracking across functions
 - **`structured_logging.zig`** - JSON, logfmt, and custom formats
 - **`file_rotation.zig`** - Automatic file management
 - **`custom_handler.zig`** - Build your own log destinations
@@ -240,4 +246,3 @@ Before starting work on a major feature, please open an issue to discuss the app
 nexlog is available under the MIT License. See the [LICENSE](./LICENSE) file for the complete text.
 
 ---
-

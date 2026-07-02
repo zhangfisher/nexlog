@@ -9,13 +9,14 @@ pub const GlobalState = struct {
     is_initialized: bool = false,
     default_logger: ?*logger.Logger = null,
     allocator: ?std.mem.Allocator = null,
-    mutex: std.Thread.Mutex = .{},
+    mutex: std.atomic.Mutex = std.atomic.Mutex.unlocked,
 
     const Self = @This();
 
     pub fn init(self: *Self, alloc: std.mem.Allocator, cfg: config.LogConfig) !void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        const mutex_helpers = @import("../mutex_helpers.zig");
+        mutex_helpers.lockMutex(&self.mutex);
+        defer mutex_helpers.unlockMutex(&self.mutex);
 
         if (self.is_initialized) {
             return errors.Error.AlreadyInitialized;
@@ -27,8 +28,9 @@ pub const GlobalState = struct {
     }
 
     pub fn deinit(self: *Self) void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        const mutex_helpers = @import("../mutex_helpers.zig");
+        mutex_helpers.lockMutex(&self.mutex);
+        defer mutex_helpers.unlockMutex(&self.mutex);
 
         if (self.default_logger) |log| {
             log.deinit();

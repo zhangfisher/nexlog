@@ -3,6 +3,10 @@ const types = @import("types.zig");
 const cfg = @import("config.zig");
 const errors = @import("errors.zig");
 const handlers = @import("../output/handlers.zig");
+const mutex_helpers = @import("../mutex_helpers.zig");
+
+const lockMutex = mutex_helpers.lockMutex;
+const unlockMutex = mutex_helpers.unlockMutex;
 
 const console = @import("../output/console.zig");
 const file = @import("../output/file.zig");
@@ -13,7 +17,7 @@ pub const Logger = struct {
 
     allocator: std.mem.Allocator,
     config: cfg.LogConfig,
-    mutex: std.Thread.Mutex,
+    mutex: std.atomic.Mutex,
     handlers: std.ArrayList(handlers.LogHandler),
     console_formatter: ?*format.Formatter,
     file_formatter: ?*format.Formatter,
@@ -50,7 +54,7 @@ pub const Logger = struct {
         logger.* = .{
             .allocator = allocator,
             .config = config,
-            .mutex = std.Thread.Mutex{},
+            .mutex = .unlocked,
             .handlers = .empty,
             .console_formatter = console_formatter,
             .file_formatter = file_formatter,
@@ -71,12 +75,17 @@ pub const Logger = struct {
         // Initialize file handler if enabled
         if (config.enable_file_logging) {
             if (config.file_path) |path| {
+                // Create a basic io instance for file operations
+                // For Zig 0.16, we need to create a Threaded instance
+                var io_threaded: std.Io.Threaded = .init_single_threaded;
+                const io = io_threaded.io();
                 const file_config = file.FileConfig{
                     .path = path,
                     .max_size = config.max_file_size,
                     .max_rotated_files = config.max_rotated_files,
                     .enable_rotation = config.enable_rotation,
                     .min_level = config.min_level,
+                    .io = io,
                 };
                 var file_handler = try file.FileHandler.init(allocator, file_config, null);
                 try logger.addHandler(file_handler.toLogHandler());
@@ -112,8 +121,8 @@ pub const Logger = struct {
             return;
         }
 
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         // Format message
         var temp_buffer: [4096]u8 = undefined;
@@ -214,8 +223,8 @@ pub const Logger = struct {
 
     // Flush all handlers
     pub fn flush(self: *Self) !void {
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         for (self.handlers.items) |handler| {
             handler.flush() catch |flush_err| {

@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "skills": {
+    "zig-0.16": {
+      "source": "zigcc/skills",
+      "sourceType": "github",
+      "skillPath": "zig-0.16/SKILL.md",
+      "computedHash": "92c45b0478c0ed5879f1cac69ac648b44f1b773882d379e00fc22937cede1ac9"
+    }
+  }
+}

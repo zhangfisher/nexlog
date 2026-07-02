@@ -1,29 +1,20 @@
 const std = @import("std");
 const nexlog = @import("nexlog");
 const JsonHandler = nexlog.output.json_handler.JsonHandler;
+const types = nexlog.core.types;
 
 pub fn main() !void {
-    // Initialize allocator
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    // Zig 0.16: use simple allocator
+    const allocator = std.heap.page_allocator;
 
     // Create a directory for testing logs if it doesn't exist
-    const log_dir = "test_logs";
-    try std.fs.cwd().makePath(log_dir);
+    // const log_dir = "test_logs"; // Not used, commented out
+    const log_file_path = "test_logs/app.json";
 
-    // Get the current working directory
-    var cwd_buf: [std.fs.max_path_bytes]u8 = undefined;
-    const cwd = std.fs.cwd().realpath(".", &cwd_buf) catch unreachable;
-
-    // Construct the absolute path for the log file within the log_dir
-    const log_file_path = std.fs.path.join(allocator, &[_][]const u8{ cwd, log_dir, "app.json" }) catch unreachable;
-    defer allocator.free(log_file_path);
-
-    // Create a JSON handler
+    // Create a JSON handler with simple path
     var json_handler = try JsonHandler.init(allocator, .{
         .min_level = .debug,
-        .pretty_print = true, // Optional: Makes the JSON output more readable
+        .pretty_print = true,
         .output_file = log_file_path,
     });
 
@@ -36,7 +27,7 @@ pub fn main() !void {
 
     // Create some basic metadata
     const metadata = nexlog.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 0, // Replace with actual thread ID in a real application
         .file = @src().file,
         .line = @src().line,

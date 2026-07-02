@@ -15,7 +15,7 @@ pub const JsonHandler = struct {
     const Self = @This();
     allocator: std.mem.Allocator,
     config: JsonHandlerConfig,
-    file: ?std.fs.File,
+    file: ?std.Io.File,
     has_written: bool,
     is_initialized: bool,
 
@@ -37,17 +37,22 @@ pub const JsonHandler = struct {
 
         // Handle file creation separately
         if (config.output_file) |path| {
-            handler.file = std.fs.createFileAbsolute(path, .{
-                .read = true,
+            // For Zig 0.16, create Io instance and use proper file creation
+            var io_threaded: std.Io.Threaded = .init_single_threaded;
+            const io = io_threaded.io();
+
+            handler.file = std.Io.Dir.cwd().createFile(io, path, .{
                 .truncate = true,
             }) catch {
                 allocator.destroy(handler);
                 return errors.Error.IOError;
             };
 
-            // Write initial bracket
-            handler.file.?.writeAll("[\n") catch {
-                handler.file.?.close();
+            // Write initial bracket using Io.Writer
+            var buffer: [10]u8 = undefined;
+            var writer = handler.file.?.writer(io, &buffer);
+            writer.interface.writeAll("[\n") catch {
+                handler.file.?.close(io);
                 allocator.destroy(handler);
                 return errors.Error.IOError;
             };
@@ -68,17 +73,24 @@ pub const JsonHandler = struct {
         // Mark as not initialized first
         self.is_initialized = false;
 
+        // Create Io instance for Zig 0.16
+        var io_threaded: std.Io.Threaded = .init_single_threaded;
+        const io = io_threaded.io();
+
         // Handle file cleanup
         if (self.file) |file| {
-            // Write closing content
+            // Write closing content using Io.Writer
+            var buffer: [10]u8 = undefined;
+            var writer = file.writer(io, &buffer);
+
             if (was_written) {
-                file.writeAll("\n]") catch {};
+                writer.interface.writeAll("\n]") catch {};
             } else {
-                file.writeAll("[]") catch {};
+                writer.interface.writeAll("[]") catch {};
             }
 
-            // Close the file
-            file.close();
+            // Close the file with io parameter
+            file.close(io);
         }
 
         // Clear all fields before destruction
@@ -111,20 +123,28 @@ pub const JsonHandler = struct {
         };
         defer self.allocator.free(json_str);
 
+        // Create Io instance for Zig 0.16
+        var io_threaded: std.Io.Threaded = .init_single_threaded;
+        const io = io_threaded.io();
+
         if (self.file) |*file| {
+            // Use Io.Writer interface
+            var buffer: [1024]u8 = undefined;
+            var writer = file.writer(io, &buffer);
+
             // Add comma if not first entry
             if (self.has_written) {
-                file.writeAll(",\n") catch {
+                writer.interface.writeAll(",\n") catch {
                     return errors.Error.IOError;
                 };
             }
-            file.writeAll(json_str) catch {
+            writer.interface.writeAll(json_str) catch {
                 return errors.Error.IOError;
             };
             self.has_written = true;
         } else {
             var stdout_buffer: [1024]u8 = undefined;
-            var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+            var stdout_writer = std.Io.File.stdout().writer(io, &stdout_buffer);
             const stdout = &stdout_writer.interface;
             stdout.print("{s}\n", .{json_str}) catch {
                 return errors.Error.IOError;
@@ -141,13 +161,21 @@ pub const JsonHandler = struct {
     ) errors.Error!void {
         if (!self.is_initialized) return errors.Error.ConfigError;
 
+        // Create Io instance for Zig 0.16
+        var io_threaded: std.Io.Threaded = .init_single_threaded;
+        const io = io_threaded.io();
+
         // For the JSON handler, we handle formatted messages by writing them directly
         // But we need to ensure the JSON structure is maintained
 
         if (self.file) |*file| {
+            // Use Io.Writer interface
+            var buffer: [1024]u8 = undefined;
+            var writer = file.writer(io, &buffer);
+
             // Add comma if not first entry
             if (self.has_written) {
-                file.writeAll(",\n") catch {
+                writer.interface.writeAll(",\n") catch {
                     return errors.Error.IOError;
                 };
             }
@@ -165,20 +193,20 @@ pub const JsonHandler = struct {
                 .{formatted_message},
             ) catch {
                 // Fallback to direct writing if formatting fails
-                file.writeAll(formatted_message) catch {
+                writer.interface.writeAll(formatted_message) catch {
                     return errors.Error.IOError;
                 };
                 self.has_written = true;
                 return errors.Error.BufferError;
             };
 
-            file.writeAll(json_wrapper) catch {
+            writer.interface.writeAll(json_wrapper) catch {
                 return errors.Error.IOError;
             };
             self.has_written = true;
         } else {
             var stdout_buffer: [1024]u8 = undefined;
-            var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+            var stdout_writer = std.Io.File.stdout().writer(io, &stdout_buffer);
             const stdout = &stdout_writer.interface;
             stdout.print("{s}\n", .{formatted_message}) catch {
                 return errors.Error.IOError;
@@ -191,8 +219,13 @@ pub const JsonHandler = struct {
 
     pub fn flush(self: *Self) errors.Error!void {
         if (!self.is_initialized) return errors.Error.ConfigError;
+
+        // Create Io instance for Zig 0.16
+        var io_threaded: std.Io.Threaded = .init_single_threaded;
+        const io = io_threaded.io();
+
         if (self.file) |*file| {
-            file.sync() catch {
+            file.sync(io) catch {
                 return errors.Error.IOError;
             };
         }

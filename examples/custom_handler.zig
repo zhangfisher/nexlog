@@ -48,7 +48,7 @@ pub const CustomHandler = struct {
         }
 
         // Format the message with prefix and timestamp
-        const timestamp = if (metadata) |m| m.timestamp else std.time.timestamp();
+        const timestamp = if (metadata) |m| m.timestamp else types.getCurrentTimestamp();
         const formatted = try std.fmt.allocPrint(
             self.allocator,
             "[{d}] [{s}] [{s}] {s}",
@@ -109,9 +109,7 @@ pub const CustomHandler = struct {
 };
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    const allocator = std.heap.page_allocator;
 
     // Create logger instance
     const logger = try Logger.init(allocator, .{});

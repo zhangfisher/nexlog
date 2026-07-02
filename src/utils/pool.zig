@@ -1,5 +1,6 @@
 const std = @import("std");
 const errors = @import("../core/errors.zig");
+const core_types = @import("../core/types.zig");
 
 /// A generic object pool implementation
 pub fn Pool(comptime T: type) type {
@@ -18,7 +19,7 @@ pub fn Pool(comptime T: type) type {
         items: []PoolItem,
         create_fn: *const fn (allocator: std.mem.Allocator) errors.Error!T,
         destroy_fn: *const fn (item: *T) void,
-        mutex: std.Thread.Mutex,
+        mutex: std.atomic.Mutex,
         stats: PoolStats,
 
         config: PoolConfig,
@@ -53,7 +54,7 @@ pub fn Pool(comptime T: type) type {
                 .items = try allocator.alloc(PoolItem, config.initial_size),
                 .create_fn = create_fn,
                 .destroy_fn = destroy_fn,
-                .mutex = std.Thread.Mutex{},
+                .mutex = std.atomic.Mutex.unlocked,
                 .stats = .{
                     .total_items = config.initial_size,
                     .items_in_use = 0,
@@ -96,7 +97,7 @@ pub fn Pool(comptime T: type) type {
             defer self.mutex.unlock();
 
             // Try to find an available item
-            const now = std.time.timestamp();
+            const now = core_types.getCurrentTimestamp();
             for (self.items) |*item| {
                 if (!item.in_use) {
                     item.in_use = true;
@@ -168,7 +169,7 @@ pub fn Pool(comptime T: type) type {
             for (self.items) |*pool_item| {
                 if (&pool_item.data == item) {
                     pool_item.in_use = false;
-                    pool_item.last_used = std.time.timestamp();
+                    pool_item.last_used = core_types.getCurrentTimestamp();
                     self.stats.items_in_use -= 1;
                     self.stats.total_releases += 1;
                     // Check if we should shrink the pool

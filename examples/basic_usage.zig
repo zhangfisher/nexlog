@@ -2,9 +2,7 @@ const std = @import("std");
 const nexlog = @import("nexlog");
 
 pub fn main() !void {
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+    const allocator = std.heap.page_allocator;
 
     // Simple logger initialization with minimal config
     const logger = try nexlog.Logger.init(allocator, .{});

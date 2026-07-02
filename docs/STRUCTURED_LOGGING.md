@@ -1,21 +1,21 @@
-# Structured Logging in NexLog
+# NexLog 中的结构化日志
 
-NexLog provides powerful structured logging capabilities that allow you to include rich, type-safe data in your log entries. This document explains how to use structured logging in your applications.
+NexLog 提供强大的结构化日志功能，允许您在日志条目中包含丰富的、类型安全的数据。本文档解释如何在应用程序中使用结构化日志。
 
-## Overview
+## 概述
 
-Structured logging allows you to include additional context with your log messages in a format that's easily parseable by log aggregation tools. NexLog supports multiple output formats:
+结构化日志允许您在日志消息中包含额外的上下文，格式便于日志聚合工具解析。NexLog 支持多种输出格式：
 
-- **JSON**: Standard JSON format for maximum compatibility
-- **Logfmt**: Key=value format for human readability and easy parsing
-- **Custom**: Configurable format with custom separators
+- **JSON**：标准 JSON 格式，具有最大的兼容性
+- **Logfmt**：键=值格式，便于人类阅读和解析
+- **自定义**：可配置的格式，支持自定义分隔符
 
-## Basic Usage
+## 基本用法
 
-### Creating Structured Fields
+### 创建结构化字段
 
 ```zig
-// Create structured fields
+// 创建结构化字段
 const fields = [_]format.StructuredField{
     .{
         .name = "user_id",
@@ -38,38 +38,38 @@ const fields = [_]format.StructuredField{
 };
 ```
 
-### Supported Field Types
+### 支持的字段类型
 
-NexLog supports a variety of field types:
+NexLog 支持多种字段类型：
 
-- **String**: Text values
-- **Integer**: 64-bit signed integers
-- **Float**: 64-bit floating point numbers
-- **Boolean**: True/false values
-- **Array**: Lists of values
-- **Object**: Nested key-value structures
-- **Null**: Explicit null values
+- **字符串**：文本值
+- **整数**：64 位有符号整数
+- **浮点数**：64 位浮点数
+- **布尔值**：真/假值
+- **数组**：值列表
+- **对象**：嵌套的键值结构
+- **空值**：显式的空值
 
-### Formatting Options
+### 格式化选项
 
-You can configure the formatter with different options:
+您可以使用不同的选项配置格式化器：
 
 ```zig
-// JSON format
+// JSON 格式
 const json_config = format.FormatConfig{
     .structured_format = .json,
     .include_timestamp_in_structured = true,
     .include_level_in_structured = true,
 };
 
-// Logfmt format
+// Logfmt 格式
 const logfmt_config = format.FormatConfig{
     .structured_format = .logfmt,
     .include_timestamp_in_structured = true,
     .include_level_in_structured = true,
 };
 
-// Custom format
+// 自定义格式
 const custom_config = format.FormatConfig{
     .structured_format = .custom,
     .include_timestamp_in_structured = true,
@@ -79,58 +79,58 @@ const custom_config = format.FormatConfig{
 };
 ```
 
-## Examples
+## 示例
 
-### JSON Output
+### JSON 输出
 
 ```json
-{"timestamp":1234567890,"level":"INFO","message":"User profile accessed","user_id":"12345","request_duration_ms":150,"tags":["api","v2"]}
+{"timestamp":1234567890,"level":"INFO","message":"访问用户资料","user_id":"12345","request_duration_ms":150,"tags":["api","v2"]}
 ```
 
-### Logfmt Output
+### Logfmt 输出
 
 ```
-timestamp=1234567890 level=INFO msg="User profile accessed" user_id=12345 request_duration_ms=150 tags=[api,v2]
+timestamp=1234567890 level=INFO msg="访问用户资料" user_id=12345 request_duration_ms=150 tags=[api,v2]
 ```
 
-### Custom Format Output
+### 自定义格式输出
 
 ```
-timestamp: 1234567890 | level: INFO | msg: User profile accessed | user_id: 12345 | request_duration_ms: 150 | tags: [api, v2]
+timestamp: 1234567890 | level: INFO | msg: 访问用户资料 | user_id: 12345 | request_duration_ms: 150 | tags: [api, v2]
 ```
 
-## Advanced Features
+## 高级功能
 
-### Nested Structures
+### 嵌套结构
 
-You can include nested objects and arrays in your structured logs:
+您可以在结构化日志中包含嵌套的对象和数组：
 
 ```zig
-// Create a nested object
+// 创建嵌套对象
 var user_data = std.StringHashMap(format.FieldValue).init(allocator);
 defer user_data.deinit();
 try user_data.put("id", .{ .string = "12345" });
-try user_data.put("name", .{ .string = "John Doe" });
+try user_data.put("name", .{ .string = "张三" });
 try user_data.put("age", .{ .integer = 30 });
 try user_data.put("active", .{ .boolean = true });
 
-// Create structured fields with nested structures
+// 创建带嵌套结构的结构化字段
 const fields = [_]format.StructuredField{
     .{
         .name = "user",
         .value = .{ .object = user_data },
         .attributes = null,
     },
-    // ... other fields
+    // ... 其他字段
 };
 ```
 
-### Field Attributes
+### 字段属性
 
-You can add additional attributes to fields for more context:
+您可以为字段添加额外的属性以提供更多上下文：
 
 ```zig
-// Create a field with attributes
+// 创建带属性的段
 var attrs = std.StringHashMap([]const u8).init(allocator);
 try attrs.put("source", "database");
 try attrs.put("format", "uuid");
@@ -142,32 +142,32 @@ const field = format.StructuredField{
 };
 ```
 
-## Integration with Logger
+## 与日志记录器集成
 
-You can integrate structured logging with the main logger:
+您可以与主日志记录器集成结构化日志：
 
 ```zig
-// Create a formatter
+// 创建格式化器
 var formatter = try format.Formatter.init(allocator, config);
 defer formatter.deinit();
 
-// Format the structured log entry
+// 格式化结构化日志条目
 const formatted = try formatter.formatStructured(
     .info,
-    "User profile accessed",
+    "访问用户资料",
     &fields,
     metadata,
 );
 defer allocator.free(formatted);
 
-// Log the formatted entry
+// 记录格式化的条目
 log.info("{s}", .{formatted}, metadata);
 ```
 
-## Best Practices
+## 最佳实践
 
-1. **Use meaningful field names**: Choose descriptive names that clearly indicate what the data represents.
-2. **Include context**: Add relevant context like user IDs, request IDs, and timestamps.
-3. **Be consistent**: Use consistent field names and types across your application.
-4. **Keep it simple**: Don't over-complicate your log structure - focus on the most important information.
-5. **Consider performance**: For high-volume logging, be mindful of memory allocations and string formatting. 
+1. **使用有意义的字段名**：选择描述性名称，清楚地表明数据代表什么。
+2. **包含上下文**：添加相关上下文，如用户 ID、请求 ID 和时间戳。
+3. **保持一致**：在整个应用程序中使用一致的字段名和类型。
+4. **保持简单**：不要过度复杂化日志结构 - 专注于最重要的信息。
+5. **考虑性能**：对于大量日志，请注意内存分配和字符串格式化。

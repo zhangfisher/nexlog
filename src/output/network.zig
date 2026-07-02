@@ -31,10 +31,10 @@ pub const NetworkHandler = struct {
 
     allocator: std.mem.Allocator,
     config: NetworkConfig,
-    mutex: std.Thread.Mutex,
+    mutex: std.atomic.Mutex,
     circular_buffer: *buffer.CircularBuffer,
     last_flush: i64,
-    connection: ?std.net.Stream,
+    connection: ?std.Io.File,
     reconnect_time: i64,
     batch_count: usize,
 
@@ -44,9 +44,9 @@ pub const NetworkHandler = struct {
         self.* = .{
             .allocator = allocator,
             .config = config,
-            .mutex = std.Thread.Mutex{},
+            .mutex = std.atomic.Mutex.unlocked,
             .circular_buffer = try buffer.CircularBuffer.init(allocator, config.buffer_size),
-            .last_flush = std.time.timestamp(),
+            .last_flush =types.getCurrentTimestamp(),
             .connection = null,
             .reconnect_time = 0,
             .batch_count = 0,
@@ -87,7 +87,7 @@ pub const NetworkHandler = struct {
             allocator,
             "{{\"timestamp\":{d},\"level\":\"{s}\",\"message\":\"{s}\"{s}}}\n",
             .{
-                if (metadata) |m| m.timestamp else std.time.timestamp(),
+                if (metadata) |m| m.timestamp else types.getCurrentTimestamp(),
                 level.toString(),
                 message,
                 if (metadata) |m| try std.fmt.allocPrint(
@@ -123,35 +123,39 @@ pub const NetworkHandler = struct {
                 );
                 defer self.allocator.free(header);
 
-                try conn.writer().writeAll(header);
+                // Use Io.Writer interface for Zig 0.16
+                var writer = conn.writer(&.{});
+                try writer.interface.writeAll(header);
 
                 // Send buffered logs
                 while (true) {
                     const bytes_read = try self.circular_buffer.read(&temp_buffer);
                     if (bytes_read == 0) break;
-                    try conn.writer().writeAll(temp_buffer[0..bytes_read]);
+                    try writer.interface.writeAll(temp_buffer[0..bytes_read]);
                 }
 
                 self.batch_count = 0;
-                self.last_flush = std.time.timestamp();
+                self.last_flush =types.getCurrentTimestamp();
                 return;
             }
 
-            // Wait before retry
-            std.time.sleep(self.config.retry_delay_ms * std.time.ns_per_ms);
+            // Wait before retry - use Io.sleep for Zig 0.16 with Duration and Clock
+            var io_threaded: std.Io.Threaded = .init_single_threaded;
+            const io = io_threaded.io();
+            try std.Io.sleep(io, .{ .nanoseconds = self.config.retry_delay_ms * std.time.ns_per_ms }, .real);
         }
 
         return error.NetworkError;
     }
 
     fn shouldFlush(self: *Self) bool {
-        const now = std.time.timestamp();
+        const now =types.getCurrentTimestamp();
         return self.batch_count >= self.config.batch_size or
             now - self.last_flush >= self.config.flush_interval_ms / 1000;
     }
 
-    fn ensureConnection(self: *Self) !std.net.Stream {
-        const now = std.time.timestamp();
+    fn ensureConnection(self: *Self) !std.Io.File {
+        const now =types.getCurrentTimestamp();
 
         // Check if we need to reconnect
         if (self.connection) |conn| {
@@ -160,12 +164,19 @@ pub const NetworkHandler = struct {
             return error.ReconnectPending;
         }
 
-        // Try to connect
-        var stream = std.net.tcpConnectToHost(
-            self.allocator,
-            self.config.endpoint.host,
-            self.config.endpoint.port,
-        ) catch |err| {
+        // Create a Threaded Io instance for network operations (Zig 0.16)
+        var io_threaded: std.Io.Threaded = .init_single_threaded;
+        const io = io_threaded.io();
+
+        // Try to connect using Io interface
+        // For Zig 0.16, we need to use the Io vtable for network operations
+        const address = std.Io.net.Address.parseIp4(self.config.endpoint.host, self.config.endpoint.port) catch |err| {
+            std.log.err("Failed to parse address {}:{} - {}", .{ self.config.endpoint.host, self.config.endpoint.port, err });
+            self.reconnect_time = now + @divTrunc(@as(i64, @intCast(self.config.retry_delay_ms)), 1000);
+            return err;
+        };
+
+        var stream = io.vtable.netConnectIp(io, address, std.Io.net.Stream.tcp) catch |err| {
             std.log.err("Failed to connect to {}:{} - {}", .{ self.config.endpoint.host, self.config.endpoint.port, err });
             // Set reconnect time on failure
             self.reconnect_time = now + @divTrunc(@as(i64, @intCast(self.config.retry_delay_ms)), 1000);

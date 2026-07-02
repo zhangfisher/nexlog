@@ -2,6 +2,10 @@ const std = @import("std");
 const types = @import("../core/types.zig");
 const async_core = @import("core.zig");
 const format = @import("../utils/format.zig");
+const mutex_helpers = @import("../mutex_helpers.zig");
+
+const lockMutex = mutex_helpers.lockMutex;
+const unlockMutex = mutex_helpers.unlockMutex;
 
 pub const AsyncConsoleConfig = struct {
     use_stderr: bool = false,
@@ -21,7 +25,7 @@ pub const AsyncConsoleHandler = struct {
     config: AsyncConsoleConfig,
     formatter: ?*format.Formatter,
     buffer: std.ArrayList(u8),
-    mutex: std.Thread.Mutex,
+    mutex: std.atomic.Mutex,
 
     pub fn init(allocator: std.mem.Allocator, config: AsyncConsoleConfig) !*Self {
         const handler = try allocator.create(Self);
@@ -45,7 +49,7 @@ pub const AsyncConsoleHandler = struct {
             .config = config,
             .formatter = formatter,
             .buffer = .empty,
-            .mutex = std.Thread.Mutex{},
+            .mutex = std.atomic.Mutex.unlocked,
         };
 
         return handler;
@@ -69,19 +73,26 @@ pub const AsyncConsoleHandler = struct {
             return self.flushAsync();
         }
 
-        self.mutex.lock();
-        defer self.mutex.unlock();
+        // Create Io instance for Zig 0.16
+        var io_threaded: std.Io.Threaded = .init_single_threaded;
+        const io = io_threaded.io();
+
+        lockMutex(&self.mutex);
+        defer unlockMutex(&self.mutex);
 
         self.buffer.clearRetainingCapacity();
 
         if (self.config.fast_mode) {
             // Ultra-fast mode: minimal formatting
-            try self.buffer.writer(self.allocator).print("[{d}] {s}\n", .{ entry.timestamp, entry.message });
+            // In Zig 0.16, use ArrayList methods directly or create a writer
+            const msg = try std.fmt.allocPrint(self.allocator, "[{d}] {s}\n", .{ entry.timestamp, entry.message });
+            defer self.allocator.free(msg);
+            try self.buffer.appendSlice(self.allocator, msg);
         } else {
             // Use stack buffer for formatting to avoid additional allocations
             var format_buffer: [2048]u8 = undefined;
-            var fbs = std.io.fixedBufferStream(&format_buffer);
-            const writer = fbs.writer();
+            // Use Io.Writer.fixed for Zig 0.16
+            var writer = std.Io.Writer.fixed(&format_buffer);
 
             // Fast path: Simple format without metadata
             if (entry.metadata == null or (!self.config.show_source_location and !self.config.show_function and !self.config.show_thread_id)) {
@@ -133,13 +144,14 @@ pub const AsyncConsoleHandler = struct {
                 try writer.print(" {s}\n", .{entry.message});
             }
 
-            try self.buffer.appendSlice(self.allocator, fbs.getWritten());
+            // Use buffered writer to get written content - buffered is a member function
+            try self.buffer.appendSlice(self.allocator, writer.buffered());
         }
 
         // Write to output in single operation (non-blocking for console)
         var output_buffer: [1024]u8 = undefined;
         if (self.config.use_stderr) {
-            var stderr_writer = std.fs.File.stderr().writer(&output_buffer);
+            var stderr_writer = std.Io.File.stderr().writer(io, &output_buffer);
             const stderr = &stderr_writer.interface;
             _ = stderr.writeAll(self.buffer.items) catch |err| {
                 std.debug.print("Console write error: {}\n", .{err});
@@ -148,7 +160,7 @@ pub const AsyncConsoleHandler = struct {
                 std.debug.print("Console flush error: {}\n", .{err});
             };
         } else {
-            var stdout_writer = std.fs.File.stdout().writer(&output_buffer);
+            var stdout_writer = std.Io.File.stdout().writer(io, &output_buffer);
             const stdout = &stdout_writer.interface;
             _ = stdout.writeAll(self.buffer.items) catch |err| {
                 std.debug.print("Console write error: {}\n", .{err});
@@ -162,12 +174,16 @@ pub const AsyncConsoleHandler = struct {
     pub fn flushAsync(self: *Self) !void {
         // Console output is typically immediately flushed by the OS
         // But we can force a sync for safety
-        const out = if (self.config.use_stderr)
-            std.fs.File.stderr()
-        else
-            std.fs.File.stdout();
+        // Create Io instance for Zig 0.16
+        var io_threaded: std.Io.Threaded = .init_single_threaded;
+        const io = io_threaded.io();
 
-        try out.sync();
+        const out = if (self.config.use_stderr)
+            std.Io.File.stderr()
+        else
+            std.Io.File.stdout();
+
+        try out.sync(io);
     }
 
     /// Convert to generic AsyncLogHandler interface

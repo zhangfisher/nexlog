@@ -1,22 +1,22 @@
-# API Reference
+# API 参考
 
-Complete API documentation for NexLog.
+NexLog 的完整 API 文档。
 
-## Core Types
+## 核心类型
 
 ### Logger
 
-Main logging interface.
+主要的日志记录接口。
 
 ```zig
 pub const Logger = struct {
     pub fn init(allocator: Allocator, config: LogConfig) !Logger
     pub fn deinit(self: *Logger) void
     
-    // Main logging methods
+    // 主要日志方法
     pub fn log(self: *Logger, level: LogLevel, comptime fmt: []const u8, args: anytype, metadata: ?LogMetadata) !void
     
-    // Convenience methods (may return errors)
+    // 便捷方法（可能返回错误）
     pub fn trace(self: *Logger, comptime fmt: []const u8, args: anytype, metadata: ?LogMetadata) !void
     pub fn debug(self: *Logger, comptime fmt: []const u8, args: anytype, metadata: ?LogMetadata) !void
     pub fn info(self: *Logger, comptime fmt: []const u8, args: anytype, metadata: ?LogMetadata) !void
@@ -24,7 +24,7 @@ pub const Logger = struct {
     pub fn err(self: *Logger, comptime fmt: []const u8, args: anytype, metadata: ?LogMetadata) !void
     pub fn critical(self: *Logger, comptime fmt: []const u8, args: anytype, metadata: ?LogMetadata) !void
     
-    // Non-failing convenience methods
+    // 不会失败的便捷方法
     pub fn traceNoFail(self: *Logger, comptime fmt: []const u8, args: anytype, metadata: ?LogMetadata) void
     pub fn debugNoFail(self: *Logger, comptime fmt: []const u8, args: anytype, metadata: ?LogMetadata) void
     pub fn infoNoFail(self: *Logger, comptime fmt: []const u8, args: anytype, metadata: ?LogMetadata) void
@@ -38,7 +38,7 @@ pub const Logger = struct {
 
 ### LogConfig
 
-Configuration structure for logger initialization.
+日志记录器初始化的配置结构。
 
 ```zig
 pub const LogConfig = struct {
@@ -60,7 +60,7 @@ pub const LogConfig = struct {
 
 ### LogLevel
 
-Available log levels.
+可用的日志级别。
 
 ```zig
 pub const LogLevel = enum {
@@ -79,7 +79,7 @@ pub const LogLevel = enum {
 
 ### LogMetadata
 
-Metadata attached to log entries.
+附加到日志条目的元数据。
 
 ```zig
 pub const LogMetadata = struct {
@@ -89,7 +89,7 @@ pub const LogMetadata = struct {
     line: u32,
     function: []const u8,
     
-    // Creation helpers
+    // 创建辅助函数
     pub fn create(src: std.builtin.SourceLocation) LogMetadata
     pub fn createWithTimestamp(timestamp: i64, src: std.builtin.SourceLocation) LogMetadata
     pub fn createWithThreadId(thread_id: usize, src: std.builtin.SourceLocation) LogMetadata
@@ -97,37 +97,37 @@ pub const LogMetadata = struct {
 };
 ```
 
-## Convenience Functions
+## 便捷函数
 
-### Metadata Helpers
+### 元数据辅助函数
 
 ```zig
-// Create metadata from caller's source location
+// 从调用者的源位置创建元数据
 pub fn here(src: std.builtin.SourceLocation) LogMetadata
 
-// Create metadata with custom timestamp
+// 使用自定义时间戳创建元数据
 pub fn hereWithTimestamp(timestamp: i64, src: std.builtin.SourceLocation) LogMetadata
 
-// Create metadata with custom thread ID
+// 使用自定义线程 ID 创建元数据
 pub fn hereWithThreadId(thread_id: usize, src: std.builtin.SourceLocation) LogMetadata
 ```
 
-Usage:
+用法：
 ```zig
-logger.info("Message", .{}, nexlog.here(@src()));
-logger.warn("Custom time", .{}, nexlog.hereWithTimestamp(1640995200, @src()));
+logger.info("消息", .{}, nexlog.here(@src()));
+logger.warn("自定义时间", .{}, nexlog.hereWithTimestamp(1640995200, @src()));
 ```
 
-## Enums
+## 枚举类型
 
 ### OutputFormat
 
 ```zig
 pub const OutputFormat = enum {
-    standard,  // Default format with placeholders
-    json,      // JSON structured output
-    compact,   // Minimal format
-    custom,    // Use custom_template
+    standard,  // 使用占位符的默认格式
+    json,      // JSON 结构化输出
+    compact,   // 最小化格式
+    custom,    // 使用 custom_template
 };
 ```
 
@@ -135,8 +135,8 @@ pub const OutputFormat = enum {
 
 ```zig
 pub const TimestampFormat = enum {
-    unix,      // Unix timestamp: 1640995200
-    iso8601,   // ISO8601 format: 2022-01-01T00:00:00Z
+    unix,      // Unix 时间戳: 1640995200
+    iso8601,   // ISO8601 格式: 2022-01-01T00:00:00Z
 };
 ```
 
@@ -151,7 +151,7 @@ pub const LevelFormat = enum {
 };
 ```
 
-## Structured Logging
+## 结构化日志
 
 ### StructuredField
 
@@ -203,28 +203,28 @@ pub const Formatter = struct {
 };
 ```
 
-## Initialization Functions
+## 初始化函数
 
-### Basic Initialization
+### 基本初始化
 
 ```zig
-// Initialize with default config
+// 使用默认配置初始化
 pub fn init(allocator: Allocator) !void
 
-// Initialize with custom config  
+// 使用自定义配置初始化
 pub fn initWithConfig(allocator: Allocator, config: LogConfig) !void
 
-// Clean up resources
+// 清理资源
 pub fn deinit() void
 
-// Check if initialized
+// 检查是否已初始化
 pub fn isInitialized() bool
 
-// Get default logger instance
+// 获取默认日志记录器实例
 pub fn getDefaultLogger() *Logger
 ```
 
-### Builder Pattern
+### 构建器模式
 
 ```zig
 pub const LogBuilder = struct {
@@ -237,7 +237,7 @@ pub const LogBuilder = struct {
 };
 ```
 
-Usage:
+用法：
 ```zig
 var logger = try LogBuilder.new(allocator)
     .withLevel(.debug)
@@ -246,7 +246,7 @@ var logger = try LogBuilder.new(allocator)
     .build();
 ```
 
-## Error Types
+## 错误类型
 
 ```zig
 pub const LogError = error{
@@ -260,7 +260,7 @@ pub const LogError = error{
 };
 ```
 
-## Utility Types
+## 工具类型
 
 ### CircularBuffer
 
@@ -286,22 +286,22 @@ pub const Pool = struct {
 };
 ```
 
-## Thread Safety
+## 线程安全
 
-All public API functions are thread-safe unless otherwise noted. Internal synchronization uses:
+除非另有说明，所有公共 API 函数都是线程安全的。内部同步使用：
 
-- Mutexes for logger state
-- Atomic operations for counters
-- Lock-free algorithms where possible
+- 互斥锁用于日志记录器状态
+- 原子操作用于计数器
+- 尽可能使用无锁算法
 
-## Memory Management
+## 内存管理
 
-- All allocations use the provided allocator
-- Buffers are reused when possible to minimize allocations
-- Call `deinit()` on all created objects to free resources
-- Use `defer` statements to ensure cleanup
+- 所有分配都使用提供的分配器
+- 尽可能重用缓冲区以最小化分配
+- 调用所有创建对象的 `deinit()` 以释放资源
+- 使用 `defer` 语句确保清理
 
-## Example Usage
+## 示例用法
 
 ```zig
 const std = @import("std");
@@ -312,7 +312,7 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const allocator = gpa.allocator();
 
-    // Create logger
+    // 创建日志记录器
     const config = nexlog.LogConfig{
         .min_level = .debug,
         .enable_colors = true,
@@ -320,14 +320,14 @@ pub fn main() !void {
     const logger = try nexlog.Logger.init(allocator, config);
     defer logger.deinit();
 
-    // Log messages
-    try logger.info("Application started", .{}, nexlog.here(@src()));
-    try logger.debug("Debug info: {}", .{42}, nexlog.here(@src()));
+    // 记录消息
+    try logger.info("应用程序启动", .{}, nexlog.here(@src()));
+    try logger.debug("调试信息: {}", .{42}, nexlog.here(@src()));
     
-    // Non-failing convenience
-    logger.warnNoFail("Warning message", .{}, nexlog.here(@src()));
+    // 不会失败的便捷方法
+    logger.warnNoFail("警告消息", .{}, nexlog.here(@src()));
     
-    // Manual flush
+    // 手动刷新
     try logger.flush();
 }
 ```

@@ -1,72 +1,72 @@
-# Custom Formatting
+# 自定义格式化
 
-NexLog provides flexible formatting options to customize how your logs appear. You can use built-in templates or create your own.
+NexLog 提供灵活的格式化选项，让您自定义日志的显示方式。您可以使用内置模板或创建自己的模板。
 
-## Template Placeholders
+## 模板占位符
 
-Available placeholders for log templates:
+日志模板的可用占位符：
 
-| Placeholder | Description | Example |
+| 占位符 | 描述 | 示例 |
 |-------------|-------------|---------|
-| `{timestamp}` | Unix timestamp | `1640995200` |
-| `{level}` | Log level | `INFO` |
-| `{message}` | Log message | `User logged in` |
-| `{file}` | Source file name | `main.zig` |
-| `{line}` | Source line number | `42` |
-| `{function}` | Function name | `handleRequest` |
-| `{thread_id}` | Thread identifier | `12345` |
-| `{hostname}` | System hostname | `server-01` |
+| `{timestamp}` | Unix 时间戳 | `1640995200` |
+| `{level}` | 日志级别 | `INFO` |
+| `{message}` | 日志消息 | `用户已登录` |
+| `{file}` | 源文件名 | `main.zig` |
+| `{line}` | 源行号 | `42` |
+| `{function}` | 函数名 | `handleRequest` |
+| `{thread_id}` | 线程标识符 | `12345` |
+| `{hostname}` | 系统主机名 | `server-01` |
 
-## Default Templates
+## 默认模板
 
-NexLog comes with several built-in templates:
+NexLog 附带几个内置模板：
 
-### Standard Format
+### 标准格式
 ```
 {timestamp} [{level}] [{file}:{line}] {message}
 ```
-Output: `1640995200 [INFO] [main.zig:42] Application started`
+输出：`1640995200 [INFO] [main.zig:42] 应用程序启动`
 
-### Compact Format
+### 紧凑格式
 ```
 {level}: {message}
 ```
-Output: `INFO: Application started`
+输出：`INFO: 应用程序启动`
 
-### Detailed Format
+### 详细格式
 ```
 {timestamp} [{level}] {hostname} {function}() {file}:{line} - {message}
 ```
-Output: `1640995200 [INFO] server-01 main() main.zig:42 - Application started`
+输出：`1640995200 [INFO] server-01 main() main.zig:42 - 应用程序启动`
 
-## Custom Templates
+## 自定义模板
 
-Define your own log format:
-
-```zig
-const config = nexlog.LogConfig{
-    .custom_template = "[{level}] {message} (from {function})",
-};
-```
-
-Output: `[INFO] User logged in (from handleLogin)`
-
-## Timestamp Formats
-
-Configure timestamp display:
+定义您自己的日志格式：
 
 ```zig
 const config = nexlog.LogConfig{
-    .timestamp_format = .iso8601, // ISO8601 format
-    // or .unix for Unix timestamp (default)
+    .custom_template = "[{level}] {message} (来自 {function})",
 };
 ```
 
-ISO8601 output: `[2022-01-01T00:00:00Z] [INFO] Application started`
+输出：`[INFO] 用户已登录 (来自 handleLogin)`
 
-## Log Level Formats
+## 时间戳格式
 
-Customize how log levels appear:
+配置时间戳显示：
+
+```zig
+const config = nexlog.LogConfig{
+    .timestamp_format = .iso8601, // ISO8601 格式
+    // 或 .unix 表示 Unix 时间戳（默认）
+};
+```
+
+ISO8601 输出：`[2022-01-01T00:00:00Z] [INFO] 应用程序启动`
+
+## 日志级别格式
+
+自定义日志级别的显示方式：
 
 ```zig
 const config = nexlog.LogConfig{
@@ -77,60 +77,60 @@ const config = nexlog.LogConfig{
 };
 ```
 
-## Colors
+## 颜色
 
-Enable colored output for better readability:
+启用彩色输出以提高可读性：
 
 ```zig
 const config = nexlog.LogConfig{
     .enable_colors = true,
-    .color_scheme = .default, // or .dark, .light
+    .color_scheme = .default, // 或 .dark, .light
 };
 ```
 
-Color mapping:
-- TRACE: Gray
-- DEBUG: Cyan  
-- INFO: Green
-- WARN: Yellow
-- ERROR: Red
-- CRITICAL: Bright Red
+颜色映射：
+- TRACE：灰色
+- DEBUG：青色  
+- INFO：绿色
+- WARN：黄色
+- ERROR：红色
+- CRITICAL：亮红色
 
-## Advanced Formatting
+## 高级格式化
 
-### Conditional Formatting
+### 条件格式化
 
-Some placeholders are optional and won't appear if data is unavailable:
+某些占位符是可选的，如果数据不可用则不会显示：
 
 ```zig
-// If no metadata provided, file/line/function won't show
+// 如果未提供元数据，file/line/function 不会显示
 const template = "{timestamp} [{level}] {file?}:{line?} {message}";
 ```
 
-### Field Width and Alignment
+### 字段宽度和对齐
 
-Control field appearance:
+控制字段外观：
 
 ```zig
-// Right-align level in 8 characters
+// 在 8 个字符中右对齐级别
 const template = "{timestamp} [{level:>8}] {message}";
 ```
 
-Output: `1640995200 [    INFO] Application started`
+输出：`1640995200 [    INFO] 应用程序启动`
 
-### Escaping
+### 转义
 
-Use double braces to include literal braces:
+使用双括号包含字面量括号：
 
 ```zig
 const template = "{{level}}: {message}"; 
 ```
 
-Output: `{level}: Application started`
+输出：`{level}: 应用程序启动`
 
-## JSON Formatting
+## JSON 格式化
 
-For structured output, enable JSON formatting:
+对于结构化输出，启用 JSON 格式化：
 
 ```zig
 const config = nexlog.LogConfig{
@@ -139,43 +139,43 @@ const config = nexlog.LogConfig{
 };
 ```
 
-Output:
+输出：
 ```json
-{"timestamp":1640995200,"level":"INFO","file":"main.zig","line":42,"message":"Application started"}
+{"timestamp":1640995200,"level":"INFO","file":"main.zig","line":42,"message":"应用程序启动"}
 ```
 
-## Performance Considerations
+## 性能考虑
 
-- Simple templates are faster than complex ones
-- Avoid expensive placeholders like `{hostname}` in high-frequency logs
-- Use buffered output for better performance
-- Consider disabling colors in production
+- 简单模板比复杂模板更快
+- 在高频日志中避免使用昂贵的占位符，如 `{hostname}`
+- 使用缓冲输出以获得更好的性能
+- 考虑在生产环境中禁用颜色
 
-## Template Validation
+## 模板验证
 
-NexLog validates templates at initialization:
+NexLog 在初始化时验证模板：
 
 ```zig
-// This will return an error
+// 这将返回错误
 const bad_config = nexlog.LogConfig{
     .custom_template = "{invalid_placeholder} {message}",
 };
-const logger = nexlog.Logger.init(allocator, bad_config); // Error!
+const logger = nexlog.Logger.init(allocator, bad_config); // 错误！
 ```
 
-## Examples
+## 示例
 
-### Web Server Logs
+### Web 服务器日志
 ```zig
 const template = "{timestamp} [{level}] {method} {url} {status_code} {response_time}ms";
 ```
 
-### Debug Logs
+### 调试日志
 ```zig  
-const template = "[{level}] {function}() at {file}:{line} - {message}";
+const template = "[{level}] {function}() 在 {file}:{line} - {message}";
 ```
 
-### Production Logs
+### 生产环境日志
 ```zig
 const template = "{timestamp} {level} {message}";
 ```

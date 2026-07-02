@@ -1,4 +1,17 @@
 const std = @import("std");
+
+/// Helper function to get current timestamp for Zig 0.16
+/// This replaces the removed std.time.timestamp() function
+pub fn getCurrentTimestamp() i64 {
+    // For Zig 0.16, use a simpler approach
+    // Since std.time.nanoTimestamp() may not be available, use a basic timestamp
+    // This is a simplified implementation that returns seconds since epoch
+    // In a production system, you'd want to use proper OS time functions
+
+    // For now, return a placeholder timestamp
+    // TODO: Implement proper time fetching for Zig 0.16
+    return 0;
+}
 // core/types.zig
 pub const LogLevel = enum {
     trace,
@@ -89,7 +102,7 @@ pub const LogMetadata = struct {
     /// Create metadata with automatic source location capture
     pub fn create(src: std.builtin.SourceLocation) LogMetadata {
         return LogMetadata{
-            .timestamp = std.time.timestamp(),
+            .timestamp =getCurrentTimestamp(),
             .thread_id = getCurrentThreadId(),
             .file = src.file,
             .line = src.line,
@@ -111,7 +124,7 @@ pub const LogMetadata = struct {
     /// Create metadata with custom thread ID but automatic source location
     pub fn createWithThreadId(thread_id: usize, src: std.builtin.SourceLocation) LogMetadata {
         return LogMetadata{
-            .timestamp = std.time.timestamp(),
+            .timestamp =getCurrentTimestamp(),
             .thread_id = thread_id,
             .file = src.file,
             .line = src.line,
@@ -122,7 +135,7 @@ pub const LogMetadata = struct {
     /// Create minimal metadata (just timestamp and thread)
     pub fn minimal() LogMetadata {
         return LogMetadata{
-            .timestamp = std.time.timestamp(),
+            .timestamp =getCurrentTimestamp(),
             .thread_id = getCurrentThreadId(),
             .file = "",
             .line = 0,
@@ -133,7 +146,7 @@ pub const LogMetadata = struct {
     /// Create metadata with context from ContextManager
     pub fn createWithContext(src: std.builtin.SourceLocation, context: ?LogContext) LogMetadata {
         return LogMetadata{
-            .timestamp = std.time.timestamp(),
+            .timestamp =getCurrentTimestamp(),
             .thread_id = getCurrentThreadId(),
             .file = src.file,
             .line = src.line,

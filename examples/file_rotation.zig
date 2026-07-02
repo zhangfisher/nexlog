@@ -1,14 +1,19 @@
 const std = @import("std");
 const nexlog = @import("nexlog");
+const types = nexlog.core.types;
 
-pub fn main() !void {
-    // Initialize allocator
-    var gpa = std.heap.GeneralPurposeAllocator(.{}){};
-    defer _ = gpa.deinit();
-    const allocator = gpa.allocator();
+pub fn main(init: std.process.Init) !void {
+    // Zig 0.16: use Juicy Main pattern
+    const allocator = init.gpa;
+    const io = init.io;
 
     // Create logs directory if it doesn't exist
-    try std.fs.cwd().makePath("logs");
+    // Note: In Zig 0.16, file operations need proper I/O handling
+    // For now, we'll use a simpler approach
+    const log_path = "logs";
+    _ = log_path; // Suppress unused warning
+
+    // Initialize logger with small file size to demonstrate rotation
 
     // Initialize logger with small file size to demonstrate rotation
     var builder = nexlog.LogBuilder.init();
@@ -30,7 +35,7 @@ pub fn main() !void {
 
     // Create base metadata
     const base_metadata = nexlog.LogMetadata{
-        .timestamp = std.time.timestamp(),
+        .timestamp = types.getCurrentTimestamp(),
         .thread_id = 0,
         .file = @src().file,
         .line = @src().line,
@@ -66,8 +71,8 @@ pub fn main() !void {
         try logger.log(level, "{s}", .{msg}, base_metadata);
         try logger.flush(); // Ensure immediate write
 
-        // Add small delay to make it more realistic
-        std.Thread.sleep(50 * std.time.ns_per_ms);
+        // Add small delay to make it more realistic - use std.Io.sleep for Zig 0.16 with Duration and Clock
+        try std.Io.sleep(io, .{ .nanoseconds = 50 * std.time.ns_per_ms }, .real);
 
         // Every 25 messages, log a notification
         if (i % 25 == 0) {
@@ -78,14 +83,15 @@ pub fn main() !void {
     // Log completion
     try logger.log(.info, "Demonstration complete - check logs/test.log and logs/test.log.1-3", .{}, base_metadata);
 
-    // List all log files
-    var dir = try std.fs.cwd().openDir("logs", .{ .iterate = true });
-    defer dir.close();
+    // List all log files - use std.Io.Dir.cwd for Zig 0.16
+    const cwd = std.Io.Dir.cwd();
+    var dir = try cwd.openDir(io, "logs", .{ .iterate = true });
+    defer dir.close(io);
 
     var dir_iter = dir.iterate();
-    while (try dir_iter.next()) |entry| {
+    while (try dir_iter.next(io)) |entry| {
         if (std.mem.startsWith(u8, entry.name, "test.log")) {
-            const file_info = try dir.statFile(entry.name);
+            const file_info = try dir.statFile(io, entry.name, .{});
             try logger.log(.info, "Found log file: {s} (size: {d} bytes)", .{ entry.name, file_info.size }, base_metadata);
         }
     }

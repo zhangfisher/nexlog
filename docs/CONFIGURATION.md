@@ -1,29 +1,29 @@
-# Configuration Reference
+# 配置参考
 
-Complete reference for configuring NexLog.
+NexLog 的完整配置参考。
 
 ## LogConfig
 
-Main configuration structure for initializing loggers.
+用于初始化日志记录器的主要配置结构。
 
 ```zig
 const config = nexlog.LogConfig{
-    // Basic settings
+    // 基本设置
     .min_level = .info,
     .enable_colors = true,
     .output_format = .standard,
     
-    // File logging
+    // 文件日志
     .enable_file_logging = false,
     .file_path = "app.log",
     .max_file_size = 10 * 1024 * 1024,
     .max_file_count = 5,
     
-    // Performance
+    // 性能
     .buffer_size = 8 * 1024,
     .flush_interval_ms = 5000,
     
-    // Formatting
+    // 格式化
     .custom_template = null,
     .timestamp_format = .unix,
     .level_format = .upper,
@@ -31,50 +31,50 @@ const config = nexlog.LogConfig{
 };
 ```
 
-## Basic Settings
+## 基本设置
 
 ### min_level
-**Type:** `LogLevel`  
-**Default:** `.info`  
-**Description:** Minimum log level to output. Messages below this level are ignored.
+**类型：** `LogLevel`  
+**默认值：** `.info`  
+**描述：** 输出的最低日志级别。低于此级别的消息将被忽略。
 
 ```zig
-.min_level = .debug, // Log debug and above
-.min_level = .warn,  // Only warnings and errors
+.min_level = .debug, // 记录 debug 级别及以上的日志
+.min_level = .warn,  // 仅记录警告和错误
 ```
 
 ### enable_colors
-**Type:** `bool`  
-**Default:** `true`  
-**Description:** Enable colored output in console logs.
+**类型：** `bool`  
+**默认值：** `true`  
+**描述：** 在控制台日志中启用彩色输出。
 
 ```zig
-.enable_colors = true,  // Colored output
-.enable_colors = false, // Plain text
+.enable_colors = true,  // 彩色输出
+.enable_colors = false, // 纯文本
 ```
 
 ### output_format
-**Type:** `OutputFormat`  
-**Default:** `.standard`  
-**Options:** `.standard`, `.json`, `.compact`, `.custom`
+**类型：** `OutputFormat`  
+**默认值：** `.standard`  
+**选项：** `.standard`, `.json`, `.compact`, `.custom`
 
 ```zig
-.output_format = .json,     // JSON structured logs
-.output_format = .compact,  // Minimal format
-.output_format = .custom,   // Use custom_template
+.output_format = .json,     // JSON 结构化日志
+.output_format = .compact,  // 最小化格式
+.output_format = .custom,   // 使用 custom_template
 ```
 
-## File Logging
+## 文件日志
 
 ### enable_file_logging
-**Type:** `bool`  
-**Default:** `false`  
-**Description:** Enable logging to file in addition to console.
+**类型：** `bool`  
+**默认值：** `false`  
+**描述：** 除了控制台外，还启用文件日志记录。
 
 ### file_path
-**Type:** `[]const u8`  
-**Default:** `"app.log"`  
-**Description:** Path where log files will be written.
+**类型：** `[]const u8`  
+**默认值：** `"app.log"`  
+**描述：** 日志文件写入的路径。
 
 ```zig
 .file_path = "logs/application.log",
@@ -82,9 +82,9 @@ const config = nexlog.LogConfig{
 ```
 
 ### max_file_size
-**Type:** `usize`  
-**Default:** `10 * 1024 * 1024` (10MB)  
-**Description:** Maximum size before file rotation occurs.
+**类型：** `usize`  
+**默认值：** `10 * 1024 * 1024` (10MB)  
+**描述：** 文件轮转前的最大大小。
 
 ```zig
 .max_file_size = 50 * 1024 * 1024, // 50MB
@@ -92,43 +92,43 @@ const config = nexlog.LogConfig{
 ```
 
 ### max_file_count
-**Type:** `usize`  
-**Default:** `5`  
-**Description:** Number of rotated files to keep.
+**类型：** `usize`  
+**默认值：** `5`  
+**描述：** 保留的轮转文件数量。
 
 ```zig
-.max_file_count = 10, // Keep 10 old files
-.max_file_count = 1,  // Keep only current file
+.max_file_count = 10, // 保留 10 个旧文件
+.max_file_count = 1,  // 仅保留当前文件
 ```
 
-## Performance Settings
+## 性能设置
 
 ### buffer_size
-**Type:** `usize`  
-**Default:** `8 * 1024` (8KB)  
-**Description:** Internal buffer size for batching log writes.
+**类型：** `usize`  
+**默认值：** `8 * 1024` (8KB)  
+**描述：** 用于批量写入日志的内部缓冲区大小。
 
 ```zig
-.buffer_size = 64 * 1024, // 64KB buffer for high throughput
-.buffer_size = 1024,      // 1KB for low memory usage
+.buffer_size = 64 * 1024, // 64KB 缓冲区用于高吞吐量
+.buffer_size = 1024,      // 1KB 用于低内存使用
 ```
 
 ### flush_interval_ms
-**Type:** `u64`  
-**Default:** `5000` (5 seconds)  
-**Description:** How often to flush buffered logs to disk.
+**类型：** `u64`  
+**默认值：** `5000` (5 秒)  
+**描述：** 将缓冲日志刷新到磁盘的频率。
 
 ```zig
-.flush_interval_ms = 1000, // Flush every second
-.flush_interval_ms = 0,    // Flush immediately (no buffering)
+.flush_interval_ms = 1000, // 每秒刷新
+.flush_interval_ms = 0,    // 立即刷新（无缓冲）
 ```
 
-## Formatting Options
+## 格式化选项
 
 ### custom_template
-**Type:** `?[]const u8`  
-**Default:** `null`  
-**Description:** Custom format template. Requires `output_format = .custom`.
+**类型：** `?[]const u8`  
+**默认值：** `null`  
+**描述：** 自定义格式模板。需要 `output_format = .custom`。
 
 ```zig
 .custom_template = "{timestamp} [{level}] {message}",
@@ -136,9 +136,9 @@ const config = nexlog.LogConfig{
 ```
 
 ### timestamp_format
-**Type:** `TimestampFormat`  
-**Default:** `.unix`  
-**Options:** `.unix`, `.iso8601`
+**类型：** `TimestampFormat`  
+**默认值：** `.unix`  
+**选项：** `.unix`, `.iso8601`
 
 ```zig
 .timestamp_format = .unix,    // 1640995200
@@ -146,9 +146,9 @@ const config = nexlog.LogConfig{
 ```
 
 ### level_format
-**Type:** `LevelFormat`  
-**Default:** `.upper`  
-**Options:** `.upper`, `.lower`, `.short_upper`, `.short_lower`
+**类型：** `LevelFormat`  
+**默认值：** `.upper`  
+**选项：** `.upper`, `.lower`, `.short_upper`, `.short_lower`
 
 ```zig
 .level_format = .upper,       // INFO, WARN, ERROR
@@ -158,88 +158,88 @@ const config = nexlog.LogConfig{
 ```
 
 ### include_metadata
-**Type:** `bool`  
-**Default:** `true`  
-**Description:** Include source file, line, and function information.
+**类型：** `bool`  
+**默认值：** `true`  
+**描述：** 包含源文件、行号和函数信息。
 
 ```zig
-.include_metadata = true,  // Show file:line info
-.include_metadata = false, // Only timestamp, level, message
+.include_metadata = true,  // 显示文件:行信息
+.include_metadata = false, // 仅时间戳、级别、消息
 ```
 
-## Log Levels
+## 日志级别
 
-Available log levels in order of severity:
+按严重程度排序的可用日志级别：
 
 ```zig
 pub const LogLevel = enum {
-    trace,    // Most verbose
-    debug,    // Debug information
-    info,     // General information
-    warn,     // Warnings
-    err,      // Errors
-    critical, // Critical errors
+    trace,    // 最详细
+    debug,    // 调试信息
+    info,     // 一般信息
+    warn,     // 警告
+    err,      // 错误
+    critical, // 严重错误
 };
 ```
 
-## Environment Variables
+## 环境变量
 
-Some settings can be overridden by environment variables:
+某些设置可以通过环境变量覆盖：
 
-- `NEXLOG_LEVEL`: Override min_level (`debug`, `info`, `warn`, `error`)
-- `NEXLOG_COLOR`: Override enable_colors (`true`, `false`)
-- `NEXLOG_FILE`: Override file_path
-- `NEXLOG_FORMAT`: Override output_format (`standard`, `json`, `compact`)
+- `NEXLOG_LEVEL`: 覆盖 min_level (`debug`, `info`, `warn`, `error`)
+- `NEXLOG_COLOR`: 覆盖 enable_colors (`true`, `false`)
+- `NEXLOG_FILE`: 覆盖 file_path
+- `NEXLOG_FORMAT`: 覆盖 output_format (`standard`, `json`, `compact`)
 
-## Validation
+## 验证
 
-NexLog validates configuration at initialization:
+NexLog 在初始化时验证配置：
 
 ```zig
-// Invalid configurations will return errors
+// 无效配置将返回错误
 const bad_config = nexlog.LogConfig{
-    .max_file_size = 0,           // Error: size must be > 0
-    .custom_template = "{bad}",   // Error: unknown placeholder
-    .buffer_size = 0,             // Error: buffer must be > 0
+    .max_file_size = 0,           // 错误：大小必须 > 0
+    .custom_template = "{bad}",   // 错误：未知的占位符
+    .buffer_size = 0,             // 错误：缓冲区必须 > 0
 };
 
 const logger = nexlog.Logger.init(allocator, bad_config) catch |err| {
-    // Handle configuration error
-    std.debug.print("Config error: {}\n", .{err});
+    // 处理配置错误
+    std.debug.print("配置错误: {}\n", .{err});
     return;
 };
 ```
 
-## Performance Recommendations
+## 性能建议
 
-### High Throughput Applications
+### 高吞吐量应用程序
 ```zig
 const config = nexlog.LogConfig{
-    .min_level = .warn,           // Reduce log volume
-    .buffer_size = 64 * 1024,     // Large buffer
-    .flush_interval_ms = 1000,    // Less frequent flushes
-    .enable_colors = false,       // Skip color processing
-    .include_metadata = false,    // Minimal formatting
+    .min_level = .warn,           // 减少日志量
+    .buffer_size = 64 * 1024,     // 大缓冲区
+    .flush_interval_ms = 1000,    // 较少刷新
+    .enable_colors = false,       // 跳过颜色处理
+    .include_metadata = false,    // 最小化格式化
 };
 ```
 
-### Development
+### 开发环境
 ```zig
 const config = nexlog.LogConfig{
-    .min_level = .debug,          // Verbose logging
-    .enable_colors = true,        // Readable output
-    .include_metadata = true,     // Full context
-    .flush_interval_ms = 0,       // Immediate output
+    .min_level = .debug,          // 详细日志
+    .enable_colors = true,        // 可读输出
+    .include_metadata = true,     // 完整上下文
+    .flush_interval_ms = 0,       // 立即输出
 };
 ```
 
-### Production
+### 生产环境
 ```zig
 const config = nexlog.LogConfig{
     .min_level = .info,
-    .output_format = .json,       // Structured for aggregation
-    .enable_file_logging = true,  // Persistent logs
-    .max_file_size = 100 * 1024 * 1024, // 100MB files
-    .enable_colors = false,       // No colors in files
+    .output_format = .json,       // 结构化便于聚合
+    .enable_file_logging = true,  // 持久化日志
+    .max_file_size = 100 * 1024 * 1024, // 100MB 文件
+    .enable_colors = false,       // 文件中不使用颜色
 };
 ```
